@@ -40,10 +40,15 @@ document.addEventListener('DOMContentLoaded', function() {
       // Detect cloud provider
       detectCloudProvider(domain);
     });
+  
+    // Add console logs for debugging
+    console.log('DNS & SSL Inspector popup initialized');
   });
   
   // Function to fetch DNS records using Chrome extension messaging
   function loadDnsRecords(domain) {
+    console.log('Loading DNS records for:', domain);
+    
     const dnsLoader = document.getElementById('dns-loader');
     
     // Define record types to fetch
@@ -61,7 +66,12 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function fetchDnsRecords(domain, recordType) {
+    console.log(`Fetching ${recordType} records for`, domain);
+    
     const recordsContainer = document.getElementById(`${recordType.toLowerCase()}-records`);
+    
+    // Show loading message
+    recordsContainer.textContent = 'Loading...';
     
     // Send message to background script to fetch DNS records
     chrome.runtime.sendMessage(
@@ -71,13 +81,18 @@ document.addEventListener('DOMContentLoaded', function() {
         recordType: recordType
       }, 
       function(response) {
+        console.log(`Received ${recordType} response:`, response);
+        
         if (chrome.runtime.lastError) {
+          console.error(`Error fetching ${recordType} records:`, chrome.runtime.lastError);
           recordsContainer.textContent = `Error: ${chrome.runtime.lastError.message}`;
           return;
         }
         
-        if (!response.success) {
-          recordsContainer.textContent = `Error: ${response.error || 'Unknown error'}`;
+        if (!response || !response.success) {
+          const errorMsg = response ? response.error || 'Unknown error' : 'No response received';
+          console.error(`Error in ${recordType} response:`, errorMsg);
+          recordsContainer.textContent = `Error: ${errorMsg}`;
           return;
         }
         
@@ -129,6 +144,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Function to load SSL certificate information
   function loadSslCertificate(url) {
+    console.log('Loading SSL certificate for:', url);
+    
     const sslLoader = document.getElementById('ssl-loader');
     
     // Send message to background script to get SSL certificate info
@@ -138,15 +155,20 @@ document.addEventListener('DOMContentLoaded', function() {
         url: url
       }, 
       function(response) {
+        console.log('Received SSL certificate response:', response);
+        
         sslLoader.classList.add('hidden');
         
         if (chrome.runtime.lastError) {
+          console.error('Error fetching SSL certificate:', chrome.runtime.lastError);
           document.getElementById('ssl-status-text').textContent = `Error: ${chrome.runtime.lastError.message}`;
           return;
         }
         
-        if (!response.success) {
-          document.getElementById('ssl-status-text').textContent = `Error: ${response.error || 'Unknown error'}`;
+        if (!response || !response.success) {
+          const errorMsg = response ? response.error || 'Unknown error' : 'No response received';
+          console.error('Error in SSL certificate response:', errorMsg);
+          document.getElementById('ssl-status-text').textContent = `Error: ${errorMsg}`;
           return;
         }
         
@@ -202,6 +224,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Function to detect cloud provider
   function detectCloudProvider(domain) {
+    console.log('Detecting cloud provider for:', domain);
+    
     const cloudLoader = document.getElementById('cloud-loader');
     
     // Send message to background script to detect cloud provider
@@ -211,15 +235,20 @@ document.addEventListener('DOMContentLoaded', function() {
         domain: domain
       }, 
       function(response) {
+        console.log('Received cloud provider response:', response);
+        
         cloudLoader.classList.add('hidden');
         
         if (chrome.runtime.lastError) {
+          console.error('Error detecting cloud provider:', chrome.runtime.lastError);
           document.getElementById('cloud-name').textContent = `Error: ${chrome.runtime.lastError.message}`;
           return;
         }
         
-        if (!response.success) {
-          document.getElementById('cloud-name').textContent = `Error: ${response.error || 'Unknown error'}`;
+        if (!response || !response.success) {
+          const errorMsg = response ? response.error || 'Unknown error' : 'No response received';
+          console.error('Error in cloud provider response:', errorMsg);
+          document.getElementById('cloud-name').textContent = `Error: ${errorMsg}`;
           return;
         }
         
