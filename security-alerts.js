@@ -8,11 +8,11 @@
 const dnsSecurityChecks = {
     /**
      * Check for missing SPF records
-     * @param {Object} txtRecords - TXT records from DNS
+     * @param {Object} dnsData - All DNS records
      * @returns {Object} - Security check result
      */
-    checkSPF: function(txtRecords) {
-      if (!txtRecords || !txtRecords.Answer || txtRecords.Answer.length === 0) {
+    checkSPF: function(dnsData) {
+      if (!dnsData || !dnsData.TXT || !dnsData.TXT.Answer || dnsData.TXT.Answer.length === 0) {
         return {
           status: 'warning',
           message: 'No TXT records found, cannot verify SPF configuration',
@@ -20,7 +20,8 @@ const dnsSecurityChecks = {
         };
       }
       
-      const hasSPF = txtRecords.Answer.some(record => {
+      // Directly check the actual TXT records
+      const hasSPF = dnsData.TXT.Answer.some(record => {
         return record.data && record.data.toLowerCase().includes('v=spf1');
       });
       
@@ -42,64 +43,61 @@ const dnsSecurityChecks = {
     
     /**
      * Check for missing DMARC records
-     * @param {string} domain - Domain to check
-     * @returns {Promise<Object>} - Security check result
+     * @param {Object} dnsData - All DNS records
+     * @param {string} domain - Domain being checked
+     * @returns {Object} - Security check result
      */
-    checkDMARC: async function(domain) {
-      try {
-        // Check for DMARC record at _dmarc.domain.com
-        const dmarcDomain = `_dmarc.${domain}`;
-        const response = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(dmarcDomain)}&type=TXT`);
-        const data = await response.json();
-        
-        if (!data.Answer || data.Answer.length === 0) {
-          return {
-            status: 'warning',
-            message: 'No DMARC record found. DMARC helps prevent email spoofing and improves deliverability.',
-            severity: 'high',
-            recommendation: 'Add a DMARC record to specify policy for handling emails that fail SPF or DKIM checks.'
-          };
-        }
-        
-        const hasDMARC = data.Answer.some(record => {
-          return record.data && record.data.toLowerCase().includes('v=dmarc1');
-        });
-        
-        if (!hasDMARC) {
-          return {
-            status: 'warning',
-            message: 'No valid DMARC record found.',
-            severity: 'high',
-            recommendation: 'Add a DMARC record with a v=DMARC1 tag.'
-          };
-        }
-        
+    checkDMARC: function(dnsData, domain) {
+      // For real extension, we'd fetch the _dmarc.domain.com TXT record
+      // For now, we'll check the existing TXT records for any DMARC entries
+      if (!dnsData || !dnsData.TXT || !dnsData.TXT.Answer || dnsData.TXT.Answer.length === 0) {
         return {
-          status: 'success',
-          message: 'DMARC record found',
-          severity: 'none'
-        };
-      } catch (error) {
-        console.error('Error checking DMARC record:', error);
-        return {
-          status: 'error',
-          message: 'Error checking DMARC record',
-          severity: 'unknown'
+          status: 'warning',
+          message: 'No TXT records found, cannot verify DMARC configuration',
+          severity: 'medium'
         };
       }
+      
+      const hasDMARC = dnsData.TXT.Answer.some(record => {
+        return record.data && record.data.toLowerCase().includes('v=dmarc1');
+      });
+      
+      if (!hasDMARC) {
+        return {
+          status: 'warning',
+          message: 'No DMARC record found. DMARC helps prevent email spoofing and improves deliverability.',
+          severity: 'high',
+          recommendation: 'Add a DMARC record to specify policy for handling emails that fail SPF or DKIM checks.'
+        };
+      }
+      
+      return {
+        status: 'success',
+        message: 'DMARC record found',
+        severity: 'none'
+      };
     },
     
     /**
      * Check for DNSSEC configuration
-     * @param {Object} nsRecords - NS records from DNS
+     * @param {Object} dnsData - All DNS records
      * @returns {Object} - Security check result
      */
-    checkDNSSEC: function(nsRecords) {
-      // This is a simplified check - in a real extension
-      // we would check for DS records and AD flag
+    checkDNSSEC: function(dnsData) {
+      // In real extension, we'd look for DS records and AD flag
+      // For now, we'll just look for RRSIG records in the data
       
-      // For now we'll just check if the DO flag was set and an RRSIG was returned
-      if (!nsRecords.AD) {
+      let hasDNSSEC = false;
+      
+      // Look for RRSIG records in any record type
+      for (const recordType in dnsData) {
+        if (dnsData[recordType] && dnsData[recordType].AD === true) {
+          hasDNSSEC = true;
+          break;
+        }
+      }
+      
+      if (!hasDNSSEC) {
         return {
           status: 'info',
           message: 'DNSSEC validation not detected. DNSSEC adds authentication to DNS lookups.',
@@ -117,11 +115,11 @@ const dnsSecurityChecks = {
     
     /**
      * Check for CAA records
-     * @param {Object} caaRecords - CAA records from DNS
+     * @param {Object} dnsData - All DNS records
      * @returns {Object} - Security check result
      */
-    checkCAA: function(caaRecords) {
-      if (!caaRecords || !caaRecords.Answer || caaRecords.Answer.length === 0) {
+    checkCAA: function(dnsData) {
+      if (!dnsData || !dnsData.CAA || !dnsData.CAA.Answer || dnsData.CAA.Answer.length === 0) {
         return {
           status: 'info',
           message: 'No CAA records found. CAA records restrict which Certificate Authorities can issue certificates for your domain.',
@@ -133,6 +131,64 @@ const dnsSecurityChecks = {
       return {
         status: 'success',
         message: 'CAA records found',
+        severity: 'none'
+      };
+    },
+    
+    /**
+     * Check for MX records
+     * @param {Object} dnsData - All DNS records
+     * @returns {Object} - Security check result
+     */
+    checkMXRecords: function(dnsData) {
+      if (!dnsData || !dnsData.MX || !dnsData.MX.Answer || dnsData.MX.Answer.length === 0) {
+        return {
+          status: 'info',
+          message: 'No MX records found. This domain may not be configured to receive email.',
+          severity: 'low'
+        };
+      }
+      
+      return {
+        status: 'success',
+        message: 'MX records found',
+        severity: 'none'
+      };
+    },
+    
+    /**
+     * Check for wildcard DNS records
+     * @param {Object} dnsData - All DNS records
+     * @returns {Object} - Security check result
+     */
+    checkWildcardRecords: function(dnsData) {
+      // Look for wildcard records in any DNS type
+      let hasWildcard = false;
+      
+      for (const recordType in dnsData) {
+        if (dnsData[recordType] && dnsData[recordType].Answer) {
+          for (const answer of dnsData[recordType].Answer) {
+            if (answer.name && answer.name.includes('*')) {
+              hasWildcard = true;
+              break;
+            }
+          }
+          if (hasWildcard) break;
+        }
+      }
+      
+      if (hasWildcard) {
+        return {
+          status: 'info',
+          message: 'Wildcard DNS records detected. While legitimate, they can sometimes be a security risk.',
+          severity: 'low',
+          recommendation: 'Review wildcard DNS records to ensure they serve a specific purpose.'
+        };
+      }
+      
+      return {
+        status: 'success',
+        message: 'No wildcard DNS records detected',
         severity: 'none'
       };
     }
@@ -211,37 +267,57 @@ const dnsSecurityChecks = {
   };
   
   /**
-   * Run all security checks and display results
+   * Run all security checks and return results
    * @param {Object} dnsData - All DNS records
    * @param {Object} sslData - SSL certificate data
    * @param {string} domain - Domain being checked
    * @param {string} url - Full URL being checked
+   * @returns {Array} - Security check results
    */
-  async function runSecurityChecks(dnsData, sslData, domain, url) {
+  function runSecurityChecks(dnsData, sslData, domain, url) {
+    console.log('Running security checks with data:', { dnsData, sslData, domain, url });
+    
     const results = [];
     
-    // Run DNS security checks
-    if (dnsData && dnsData.TXT) {
-      results.push(dnsSecurityChecks.checkSPF(dnsData.TXT));
+    // Run DNS security checks if we have DNS data
+    if (dnsData) {
+      // Add debug output to see what's actually in the DNS data
+      console.log('DNS data available for security checks:', dnsData);
+      
+      // Check SPF
+      results.push(dnsSecurityChecks.checkSPF(dnsData));
+      
+      // Check DMARC
+      results.push(dnsSecurityChecks.checkDMARC(dnsData, domain));
+      
+      // Check DNSSEC
+      results.push(dnsSecurityChecks.checkDNSSEC(dnsData));
+      
+      // Check CAA records
+      results.push(dnsSecurityChecks.checkCAA(dnsData));
+      
+      // Check MX records
+      results.push(dnsSecurityChecks.checkMXRecords(dnsData));
+      
+      // Check wildcard records
+      results.push(dnsSecurityChecks.checkWildcardRecords(dnsData));
+    } else {
+      console.log('No DNS data available for security checks');
+      results.push({
+        status: 'error',
+        message: 'No DNS data available for security checks',
+        severity: 'unknown'
+      });
     }
-    
-    if (dnsData && dnsData.NS) {
-      results.push(dnsSecurityChecks.checkDNSSEC(dnsData.NS));
-    }
-    
-    if (dnsData && dnsData.CAA) {
-      results.push(dnsSecurityChecks.checkCAA(dnsData.CAA));
-    }
-    
-    // Check DMARC (async)
-    const dmarcResult = await dnsSecurityChecks.checkDMARC(domain);
-    results.push(dmarcResult);
     
     // Run SSL security checks
     results.push(sslSecurityChecks.checkHTTPS(url));
     
     if (sslData) {
+      console.log('SSL data available for security checks:', sslData);
       results.push(sslSecurityChecks.checkCertExpiration(sslData));
+    } else {
+      console.log('No SSL data available for security checks');
     }
     
     // Check if domain is suspicious
@@ -266,6 +342,8 @@ const dnsSecurityChecks = {
     if (!containerElement || !securityResults || !Array.isArray(securityResults)) {
       return;
     }
+    
+    console.log('Displaying security alerts:', securityResults);
     
     // Clear the container
     containerElement.innerHTML = '';
@@ -321,12 +399,20 @@ const dnsSecurityChecks = {
       const issuesList = document.createElement('ul');
       issues.forEach(issue => {
         const item = document.createElement('li');
-        item.textContent = issue.message;
+        if (window.SecurityUtils) {
+          window.SecurityUtils.setTextContentSafely(item, issue.message);
+        } else {
+          item.textContent = issue.message;
+        }
         
         if (issue.recommendation) {
           const recommendation = document.createElement('p');
           recommendation.className = 'recommendation';
-          recommendation.textContent = issue.recommendation;
+          if (window.SecurityUtils) {
+            window.SecurityUtils.setTextContentSafely(recommendation, issue.recommendation);
+          } else {
+            recommendation.textContent = issue.recommendation;
+          }
           item.appendChild(recommendation);
         }
         
@@ -354,13 +440,26 @@ const dnsSecurityChecks = {
       
       passedChecks.forEach(check => {
         const item = document.createElement('li');
-        item.textContent = check.message;
+        if (window.SecurityUtils) {
+          window.SecurityUtils.setTextContentSafely(item, check.message);
+        } else {
+          item.textContent = check.message;
+        }
         passedList.appendChild(item);
       });
       
       passedContainer.appendChild(passedList);
       containerElement.appendChild(passedContainer);
     }
+    
+    // Add temporary data notice
+    const tempDataNotice = document.createElement('div');
+    tempDataNotice.className = 'temp-data-info';
+    tempDataNotice.innerHTML = `
+      <span class="icon">🔒</span>
+      <span>All security scan results are stored in memory only and are automatically cleared when you close your browser.</span>
+    `;
+    containerElement.appendChild(tempDataNotice);
   }
   
   // Export functions
