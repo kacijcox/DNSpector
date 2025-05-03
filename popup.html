@@ -142,10 +142,25 @@
     </div>
   </div>
   
-  <!-- Load scripts -->
+  <!-- Load scripts in correct order -->
+  <!-- Load utility libraries first -->
   <script src="security-utils.js"></script>
+  
+  <!-- Load session data after utilities -->
   <script src="session-data.js"></script>
+  
+  <!-- Load specialized libraries that depend on utils and session -->
   <script src="security-alerts.js"></script>
+  
+  <!-- Load main popup script last -->
   <script src="popup.js"></script>
+  
+  <!-- Add script loading verification -->
+  <script>
+    console.log("Script loading verification:");
+    console.log("- SecurityUtils loaded:", !!window.SecurityUtils);
+    console.log("- SessionData loaded:", !!window.SessionData);
+    console.log("- SecurityAlerts loaded:", !!window.SecurityAlerts);
+  </script>
 </body>
 </html>
