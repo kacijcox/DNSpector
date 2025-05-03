@@ -5,80 +5,164 @@ chrome.runtime.onInstalled.addListener(function() {
     console.log('DNS & SSL Inspector extension installed');
   });
   
-  // Function to get real DNS records
-  // Note: Chrome extensions can't directly query DNS, so we'd need to use external APIs
-  async function fetchDnsRecords(domain, recordType) {
-    // In a production extension, you would use a reliable DNS API service
-    // For example, using Google's DNS-over-HTTPS API or a similar service
-    
-    // Example endpoint: https://dns.google/resolve?name=example.com&type=A
-    // This would require a server proxy or appropriate permissions
-    
-    try {
-      // This is a placeholder for the actual API call
-      const response = await fetch(`https://dns.google/resolve?name=${domain}&type=${recordType}`);
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error(`Error fetching ${recordType} records for ${domain}:`, error);
-      return null;
-    }
-  }
+  // Set up CORS headers for DNS-over-HTTPS requests
+  chrome.webRequest.onHeadersReceived.addListener(
+    function(details) {
+      return {
+        responseHeaders: [
+          ...details.responseHeaders,
+          { name: 'Access-Control-Allow-Origin', value: '*' },
+          { name: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
+          { name: 'Access-Control-Allow-Headers', value: 'Content-Type' }
+        ]
+      };
+    },
+    { urls: ["https://dns.google/*", "https://cloudflare-dns.com/*"] },
+    ["blocking", "responseHeaders"]
+  );
   
   // Listen for messages from popup
   chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+    // Handle DNS record requests
     if (request.action === "getDnsRecords") {
-      // Handle DNS record requests
-      // In a real extension, we'd call fetchDnsRecords here
-      
-      // Simulate a response for now
-      setTimeout(() => {
-        sendResponse({success: true, records: ['Simulated record']});
-      }, 500);
+      fetchDnsRecords(request.domain, request.recordType)
+        .then(data => {
+          sendResponse({ success: true, records: data });
+        })
+        .catch(error => {
+          console.error(error);
+          sendResponse({ success: false, error: error.message });
+        });
       
       // Return true to indicate we'll respond asynchronously
       return true;
     }
     
+    // Handle SSL certificate information requests
     if (request.action === "getSslCertificate") {
-      // In a real extension, we'd use chrome.webRequest API to get certificate info
-      // or execute a content script to get this information
-      
-      // Simulate a response
-      setTimeout(() => {
-        sendResponse({
-          success: true,
-          certificate: {
-            subject: "example.com",
-            issuer: "Example CA",
-            validFrom: new Date().toISOString(),
-            validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-          }
+      fetchSslCertificate(request.url)
+        .then(data => {
+          sendResponse({ success: true, certificate: data });
+        })
+        .catch(error => {
+          console.error(error);
+          sendResponse({ success: false, error: error.message });
         });
-      }, 500);
       
       return true;
     }
     
+    // Handle cloud provider detection
     if (request.action === "getCloudProvider") {
-      // In a real extension, we'd analyze IP information and other data
-      // to determine the cloud provider
-      
-      // Simulate a response
-      setTimeout(() => {
-        sendResponse({
-          success: true,
-          provider: "Amazon Web Services"
+      detectCloudProvider(request.domain)
+        .then(data => {
+          sendResponse({ success: true, provider: data });
+        })
+        .catch(error => {
+          console.error(error);
+          sendResponse({ success: false, error: error.message });
         });
-      }, 500);
       
       return true;
     }
   });
   
-  // Function to check for SSL certificate expiry
-  // In a production extension, you might want to check bookmarked or frequently visited sites
-  function checkCertificateExpiry(url) {
-    // Implementation would go here
-    // Could send browser notifications if certificates are expiring soon
+  // Function to fetch DNS records
+  async function fetchDnsRecords(domain, recordType) {
+    try {
+      // Using Google's DNS-over-HTTPS API
+      const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${recordType}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`DNS query failed: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`Error fetching ${recordType} records for ${domain}:`, error);
+      throw error;
+    }
+  }
+  
+  // Function to fetch SSL certificate information
+  async function fetchSslCertificate(url) {
+    // We'll need to use a proxy service or a content script injection 
+    // to get SSL certificate details - this is a simplified version
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+          const activeTab = tabs[0];
+          
+          // Execute a content script to get certificate information
+          chrome.tabs.executeScript(
+            activeTab.id,
+            { code: 'window.location.protocol === "https:" ? "Secure" : "Insecure"' },
+            function(results) {
+              if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError);
+                return;
+              }
+              
+              const isSecure = results[0] === "Secure";
+              
+              // In a real extension, we would get more detailed certificate info
+              // using chrome.webRequest API or a proxy service
+              resolve({
+                secure: isSecure,
+                protocol: isSecure ? "TLS" : "None",
+                issuer: isSecure ? "Certificate Authority" : "None",
+                validFrom: isSecure ? new Date().toISOString() : "N/A",
+                validUntil: isSecure ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : "N/A"
+              });
+            }
+          );
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+  
+  // Function to detect cloud provider
+  async function detectCloudProvider(domain) {
+    try {
+      // First, get IP address from DNS A record
+      const dnsResult = await fetchDnsRecords(domain, "A");
+      
+      if (!dnsResult.Answer || dnsResult.Answer.length === 0) {
+        return { name: "Unknown", confidence: 0 };
+      }
+      
+      const ip = dnsResult.Answer[0].data;
+      
+      // In a real extension, we would check IP ranges against known cloud providers
+      // This would require a database of IP ranges or an API service
+      
+      // For demo purposes, we'll do a very basic check
+      // A more complete solution would use a cloud provider IP database
+      
+      // Check CNAME records for clues
+      const cnameResult = await fetchDnsRecords(domain, "CNAME");
+      if (cnameResult.Answer) {
+        const cname = cnameResult.Answer[0]?.data || "";
+        
+        if (cname.includes("cloudfront.net")) {
+          return { name: "Amazon AWS CloudFront", confidence: 0.9 };
+        } else if (cname.includes("cloudflare")) {
+          return { name: "Cloudflare", confidence: 0.9 };
+        } else if (cname.includes("azure")) {
+          return { name: "Microsoft Azure", confidence: 0.9 };
+        } else if (cname.includes("googleusercontent")) {
+          return { name: "Google Cloud", confidence: 0.9 };
+        }
+      }
+      
+      // Return a generic result - in a real extension we would do more checks
+      return { name: "Unknown", confidence: 0.1, ip: ip };
+    } catch (error) {
+      console.error(`Error detecting cloud provider for ${domain}:`, error);
+      return { name: "Error", confidence: 0, error: error.message };
+    }
   }

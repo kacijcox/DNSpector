@@ -6,9 +6,12 @@
     "permissions": [
       "activeTab",
       "scripting",
-      "storage"
+      "storage",
+      "webRequest"
     ],
     "host_permissions": [
+      "https://dns.google/*",
+      "https://cloudflare-dns.com/*",
       "<all_urls>"
     ],
     "action": {

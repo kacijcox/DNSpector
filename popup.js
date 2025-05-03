@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  // Function to fetch DNS records using public DNS API
+  // Function to fetch DNS records using Chrome extension messaging
   function loadDnsRecords(domain) {
     const dnsLoader = document.getElementById('dns-loader');
     
@@ -54,158 +54,215 @@ document.addEventListener('DOMContentLoaded', function() {
       fetchDnsRecords(domain, type);
     });
     
-    // Hide loader after a delay (assuming all APIs respond within 2 seconds)
+    // Hide loader after a delay (assuming all APIs respond within 3 seconds)
     setTimeout(() => {
       dnsLoader.classList.add('hidden');
-    }, 2000);
+    }, 3000);
   }
   
   function fetchDnsRecords(domain, recordType) {
-    // We'll use Google's Public DNS API through an HTTPS endpoint
-    // Note: In a real extension, you would need a server proxy or use a different approach due to CORS
-    // For demo purposes, we'll simulate the responses
-    
     const recordsContainer = document.getElementById(`${recordType.toLowerCase()}-records`);
     
-    // Simulate API call delay
-    setTimeout(() => {
-      // Simulate different records based on record type
-      let records = [];
-      
-      switch(recordType) {
-        case 'A':
-          records = ['93.184.216.34', '93.184.216.35'];
-          break;
-        case 'AAAA':
-          records = ['2606:2800:220:1:248:1893:25c8:1946'];
-          break;
-        case 'CNAME':
-          records = ['example.com'];
-          break;
-        case 'MX':
-          records = ['10 mail.example.com', '20 backup-mail.example.com'];
-          break;
-        case 'TXT':
-          records = [
-            'v=spf1 include:_spf.example.com -all',
-            'google-site-verification=abcdefghijklmnopqrstuvwxyz'
-          ];
-          break;
-        case 'CAA':
-          records = ['0 issue "letsencrypt.org"', '0 issuewild "comodo.com"'];
-          break;
-        default:
-          records = ['No records found'];
+    // Send message to background script to fetch DNS records
+    chrome.runtime.sendMessage(
+      {
+        action: "getDnsRecords",
+        domain: domain,
+        recordType: recordType
+      }, 
+      function(response) {
+        if (chrome.runtime.lastError) {
+          recordsContainer.textContent = `Error: ${chrome.runtime.lastError.message}`;
+          return;
+        }
+        
+        if (!response.success) {
+          recordsContainer.textContent = `Error: ${response.error || 'Unknown error'}`;
+          return;
+        }
+        
+        const data = response.records;
+        
+        if (!data.Answer || data.Answer.length === 0) {
+          recordsContainer.textContent = 'No records found';
+          return;
+        }
+        
+        // Clear existing content
+        recordsContainer.innerHTML = '';
+        
+        // Add records to container
+        data.Answer.forEach(answer => {
+          const recordItem = document.createElement('div');
+          recordItem.className = 'record-item';
+          
+          // Format record data based on record type
+          let displayText = '';
+          
+          switch(recordType) {
+            case 'MX':
+              // MX records have priority and target
+              const [priority, host] = answer.data.split(' ');
+              displayText = `Priority: ${priority}, Host: ${host}`;
+              break;
+            case 'TXT':
+              // Remove quotes from TXT records if present
+              let txtValue = answer.data;
+              if (txtValue.startsWith('"') && txtValue.endsWith('"')) {
+                txtValue = txtValue.slice(1, -1);
+              }
+              displayText = txtValue;
+              break;
+            default:
+              displayText = answer.data;
+          }
+          
+          // Add TTL info
+          displayText += ` (TTL: ${answer.TTL}s)`;
+          
+          recordItem.textContent = displayText;
+          recordsContainer.appendChild(recordItem);
+        });
       }
-      
-      if (records.length === 0) {
-        recordsContainer.textContent = 'No records found';
-        return;
-      }
-      
-      // Clear existing content
-      recordsContainer.innerHTML = '';
-      
-      // Add records to container
-      records.forEach(record => {
-        const recordItem = document.createElement('div');
-        recordItem.className = 'record-item';
-        recordItem.textContent = record;
-        recordsContainer.appendChild(recordItem);
-      });
-    }, 500);
+    );
   }
   
   // Function to load SSL certificate information
   function loadSslCertificate(url) {
     const sslLoader = document.getElementById('ssl-loader');
     
-    // In a real extension, you would need to execute a content script or use native messaging
-    // For demo purposes, we'll simulate the response
-    
-    setTimeout(() => {
-      sslLoader.classList.add('hidden');
-      
-      // Simulate certificate data
-      const certData = {
-        subject: 'example.com',
-        issuer: 'DigiCert Inc',
-        validFrom: new Date(2023, 0, 1).toLocaleDateString(),
-        validUntil: new Date(2024, 0, 1).toLocaleDateString(),
-        tlsVersion: 'TLS 1.3',
-        isValid: true,
-        chain: [
-          'CN=example.com, O=Example Inc, L=Mountain View, S=California, C=US',
-          'CN=DigiCert TLS RSA SHA256 2020 CA1, O=DigiCert Inc, C=US',
-          'CN=DigiCert Global Root CA, OU=www.digicert.com, O=DigiCert Inc, C=US'
-        ]
-      };
-      
-      // Update UI with certificate data
-      document.getElementById('cert-subject').textContent = certData.subject;
-      document.getElementById('cert-issuer').textContent = certData.issuer;
-      document.getElementById('cert-valid-from').textContent = certData.validFrom;
-      document.getElementById('cert-valid-until').textContent = certData.validUntil;
-      document.getElementById('tls-version').textContent = certData.tlsVersion;
-      
-      // Set SSL status
-      const sslIcon = document.getElementById('ssl-icon');
-      const sslStatusText = document.getElementById('ssl-status-text');
-      
-      if (certData.isValid) {
-        sslIcon.textContent = '🔒';
-        sslIcon.className = 'status-secure';
-        sslStatusText.textContent = 'Connection is secure';
-        sslStatusText.className = 'status-secure';
-      } else {
-        sslIcon.textContent = '⚠️';
-        sslIcon.className = 'status-warning';
-        sslStatusText.textContent = 'Certificate has issues';
-        sslStatusText.className = 'status-warning';
-      }
-      
-      // Display certificate chain
-      const chainContainer = document.getElementById('cert-chain');
-      chainContainer.innerHTML = '';
-      
-      certData.chain.forEach((cert, index) => {
-        const certItem = document.createElement('div');
-        certItem.className = 'cert-chain-item';
-        certItem.textContent = cert;
-        chainContainer.appendChild(certItem);
+    // Send message to background script to get SSL certificate info
+    chrome.runtime.sendMessage(
+      {
+        action: "getSslCertificate",
+        url: url
+      }, 
+      function(response) {
+        sslLoader.classList.add('hidden');
         
-        // Add arrow except for the last item
-        if (index < certData.chain.length - 1) {
-          const arrow = document.createElement('div');
-          arrow.textContent = '↓';
-          arrow.style.textAlign = 'center';
-          arrow.style.margin = '5px 0';
-          chainContainer.appendChild(arrow);
+        if (chrome.runtime.lastError) {
+          document.getElementById('ssl-status-text').textContent = `Error: ${chrome.runtime.lastError.message}`;
+          return;
         }
-      });
-    }, 800);
+        
+        if (!response.success) {
+          document.getElementById('ssl-status-text').textContent = `Error: ${response.error || 'Unknown error'}`;
+          return;
+        }
+        
+        const certData = response.certificate;
+        
+        // Update UI with certificate data
+        document.getElementById('cert-subject').textContent = url.split('//')[1].split('/')[0]; // Extract domain from URL
+        document.getElementById('cert-issuer').textContent = certData.issuer;
+        document.getElementById('cert-valid-from').textContent = formatDate(certData.validFrom);
+        document.getElementById('cert-valid-until').textContent = formatDate(certData.validUntil);
+        document.getElementById('tls-version').textContent = certData.protocol;
+        
+        // Set SSL status
+        const sslIcon = document.getElementById('ssl-icon');
+        const sslStatusText = document.getElementById('ssl-status-text');
+        
+        if (certData.secure) {
+          sslIcon.textContent = '🔒';
+          sslIcon.className = 'status-secure';
+          sslStatusText.textContent = 'Connection is secure';
+          sslStatusText.className = 'status-secure';
+        } else {
+          sslIcon.textContent = '⚠️';
+          sslIcon.className = 'status-warning';
+          sslStatusText.textContent = 'Not using HTTPS';
+          sslStatusText.className = 'status-warning';
+        }
+        
+        // Display certificate chain
+        const chainContainer = document.getElementById('cert-chain');
+        chainContainer.innerHTML = '';
+        
+        // In a real extension, we would show the actual certificate chain
+        // For now, we're showing placeholder data
+        ['Root Certificate Authority', 'Intermediate CA', url.split('//')[1].split('/')[0]].forEach((cert, index) => {
+          const certItem = document.createElement('div');
+          certItem.className = 'cert-chain-item';
+          certItem.textContent = cert;
+          chainContainer.appendChild(certItem);
+          
+          // Add arrow except for the last item
+          if (index < 2) {
+            const arrow = document.createElement('div');
+            arrow.textContent = '↓';
+            arrow.style.textAlign = 'center';
+            arrow.style.margin = '5px 0';
+            chainContainer.appendChild(arrow);
+          }
+        });
+      }
+    );
   }
   
   // Function to detect cloud provider
   function detectCloudProvider(domain) {
     const cloudLoader = document.getElementById('cloud-loader');
     
-    // In a real extension, you would analyze IP ranges, CNAME patterns, or HTTP headers
-    // For demo purposes, we'll simulate the detection
+    // Send message to background script to detect cloud provider
+    chrome.runtime.sendMessage(
+      {
+        action: "getCloudProvider",
+        domain: domain
+      }, 
+      function(response) {
+        cloudLoader.classList.add('hidden');
+        
+        if (chrome.runtime.lastError) {
+          document.getElementById('cloud-name').textContent = `Error: ${chrome.runtime.lastError.message}`;
+          return;
+        }
+        
+        if (!response.success) {
+          document.getElementById('cloud-name').textContent = `Error: ${response.error || 'Unknown error'}`;
+          return;
+        }
+        
+        const cloudProvider = response.provider;
+        
+        // Map cloud provider to icon
+        let icon = '☁️';
+        if (cloudProvider.name.includes('AWS') || cloudProvider.name.includes('Amazon')) {
+          icon = '☁️ AWS';
+        } else if (cloudProvider.name.includes('Azure') || cloudProvider.name.includes('Microsoft')) {
+          icon = '☁️ Azure';
+        } else if (cloudProvider.name.includes('Google')) {
+          icon = '☁️ GCP';
+        } else if (cloudProvider.name.includes('Cloudflare')) {
+          icon = '☁️ CF';
+        }
+        
+        // Update UI with cloud provider info
+        document.getElementById('cloud-icon').textContent = icon;
+        document.getElementById('cloud-name').textContent = cloudProvider.name;
+        
+        // Add additional details if available
+        let details = '';
+        if (cloudProvider.ip) {
+          details += `IP: ${cloudProvider.ip}`;
+        }
+        if (cloudProvider.confidence) {
+          details += ` (${Math.round(cloudProvider.confidence * 100)}% confidence)`;
+        }
+        
+        document.getElementById('cloud-details').textContent = details;
+      }
+    );
+  }
+  
+  // Helper function to format date strings
+  function formatDate(dateStr) {
+    if (dateStr === 'N/A') return dateStr;
     
-    setTimeout(() => {
-      cloudLoader.classList.add('hidden');
-      
-      // Simulate cloud detection
-      let cloudProvider = {
-        name: 'Amazon Web Services',
-        icon: '☁️',
-        details: 'Hosted in us-east-1 region'
-      };
-      
-      // Update UI with cloud provider info
-      document.getElementById('cloud-icon').textContent = cloudProvider.icon;
-      document.getElementById('cloud-name').textContent = cloudProvider.name;
-      document.getElementById('cloud-details').textContent = cloudProvider.details;
-    }, 1000);
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    } catch (e) {
+      return dateStr;
+    }
   }
