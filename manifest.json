@@ -6,13 +6,11 @@
     "permissions": [
       "activeTab",
       "scripting",
-      "storage",
-      "webRequest"
+      "storage"
     ],
     "host_permissions": [
       "https://dns.google/*",
-      "https://cloudflare-dns.com/*",
-      "<all_urls>"
+      "https://cloudflare-dns.com/*"
     ],
     "action": {
       "default_popup": "popup.html",
@@ -29,5 +27,8 @@
     },
     "background": {
       "service_worker": "background.js"
+    },
+    "content_security_policy": {
+      "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://dns.google https://cloudflare-dns.com"
     }
   }
