@@ -19,6 +19,8 @@
       <button class="tab-button active" data-tab="dns">DNS Records</button>
       <button class="tab-button" data-tab="ssl">SSL Certificate</button>
       <button class="tab-button" data-tab="cloud">Cloud Provider</button>
+      <button class="tab-button" data-tab="security">Security</button>
+      <button class="tab-button" data-tab="settings">Settings</button>
     </div>
 
     <div class="tab-content">
@@ -97,8 +99,53 @@
           <div id="cloud-details"></div>
         </div>
       </div>
+      
+      <div id="security" class="tab-pane">
+        <div class="loader" id="security-loader"></div>
+        <div id="security-alerts" class="security-alerts">
+          <!-- Security alerts will be added here -->
+        </div>
+        <div class="security-details">
+          <h3>Security Assessment</h3>
+          <div id="security-summary"></div>
+          <div id="security-recommendations"></div>
+        </div>
+        <div class="security-controls">
+          <button id="btn-run-security-check" class="button primary">Run Security Check</button>
+        </div>
+      </div>
+      
+      <div id="settings" class="tab-pane">
+        <h3>Settings</h3>
+        <div class="settings-group">
+          <h4>Session Data</h4>
+          <div class="setting-item">
+            <span>Data is only stored in memory during your browsing session</span>
+          </div>
+          <div class="setting-item">
+            <button id="btn-clear-session" class="button danger">Clear All Session Data</button>
+          </div>
+        </div>
+        <div class="settings-group">
+          <h4>About</h4>
+          <div class="setting-item">
+            <span>DNS & SSL Inspector v1.0</span>
+          </div>
+          <div class="setting-item">
+            <span>A developer-focused tool for DNS and SSL inspection</span>
+          </div>
+          <div class="setting-item">
+            <span>Session Started: <span id="session-start-time">-</span></span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+  
+  <!-- Load scripts -->
+  <script src="security-utils.js"></script>
+  <script src="session-data.js"></script>
+  <script src="security-alerts.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
