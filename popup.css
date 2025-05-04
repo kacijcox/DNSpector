@@ -7,121 +7,25 @@
   --success-color: #27ae60;
   --warning-color: #f39c12;
   --danger-color: #e74c3c;
-  --titlebar-bg: #2c3e50;
-  --titlebar-text: #ffffff;
-  --window-control-bg: rgba(255, 255, 255, 0.1);
-  --window-control-hover: rgba(255, 255, 255, 0.2);
 }
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
+
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: transparent;
+  background-color: var(--background-color);
   color: var(--text-color);
   font-size: 14px;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
-/* Window styling for the popup */
-.window {
-  position: relative;
-  background-color: var(--background-color);
-  border-radius: 6px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   min-width: 400px;
-  min-height: 300px;
-  max-width: 800px;
-  max-height: 600px;
-  width: 450px;
-  height: 500px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border-color);
-}
-
-/* Titlebar styling for drag functionality */
-.titlebar {
-  background-color: var(--titlebar-bg);
-  color: var(--titlebar-text);
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: move;
-  user-select: none;
-  height: 32px;
-}
-
-.titlebar-text {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-/* Window control buttons */
-.window-controls {
-  display: flex;
-  gap: 6px;
-}
-
-.window-control {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.minimize {
-  background-color: var(--warning-color);
-}
-
-.maximize {
-  background-color: var(--success-color);
-}
-
-.close {
-  background-color: var(--danger-color);
-}
-
-.window-control:hover {
-  filter: brightness(0.9);
-}
-
-/* Resize handle */
-.resize-handle {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 15px;
-  height: 15px;
-  cursor: nwse-resize;
-  background: linear-gradient(
-    135deg,
-    transparent 0%,
-    transparent 50%,
-    var(--secondary-color) 50%,
-    var(--secondary-color) 60%,
-    transparent 60%,
-    transparent 70%,
-    var(--secondary-color) 70%,
-    var(--secondary-color) 80%,
-    transparent 80%,
-    transparent 90%,
-    var(--secondary-color) 90%,
-    var(--secondary-color) 100%
-  );
-  z-index: 10;
+  max-width: 100%;
 }
 
 .container {
   padding: 15px;
-  overflow-y: auto;
-  flex-grow: 1;
 }
 
 header {
@@ -129,11 +33,13 @@ header {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 10px;
 }
+
 h1 {
   font-size: 18px;
   color: var(--primary-color);
   margin-bottom: 8px;
 }
+
 .site-info {
   display: flex;
   align-items: center;
@@ -141,19 +47,23 @@ h1 {
   font-size: 13px;
   color: var(--secondary-color);
 }
+
 #favicon-container {
   width: 16px;
   height: 16px;
 }
+
 #favicon-container img {
   width: 100%;
   height: 100%;
 }
+
 .tabs {
   display: flex;
   border-bottom: 1px solid var(--border-color);
   margin-bottom: 15px;
 }
+
 .tab-button {
   padding: 8px 12px;
   background: none;
@@ -164,13 +74,16 @@ h1 {
   position: relative;
   transition: color 0.3s;
 }
+
 .tab-button:hover {
   color: var(--secondary-color);
 }
+
 .tab-button.active {
   color: var(--secondary-color);
   font-weight: 600;
 }
+
 .tab-button.active::after {
   content: '';
   position: absolute;
@@ -180,21 +93,26 @@ h1 {
   height: 2px;
   background-color: var(--secondary-color);
 }
+
 .tab-pane {
   display: none;
 }
+
 .tab-pane.active {
   display: block;
 }
+
 .record-section {
   margin-bottom: 15px;
 }
+
 h3 {
   font-size: 14px;
   color: var(--primary-color);
   margin-bottom: 5px;
   font-weight: 600;
 }
+
 .records-list {
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 13px;
@@ -205,31 +123,37 @@ h3 {
   max-height: 200px;
   overflow-y: auto;
 }
+
 .record-item {
   margin-bottom: 5px;
   padding-bottom: 5px;
   border-bottom: 1px dotted var(--border-color);
 }
+
 .record-item:last-child {
   margin-bottom: 0;
   padding-bottom: 0;
   border-bottom: none;
 }
+
 /* Special styling for nameserver records */
 #ns-records .record-item {
   font-weight: 500;
   color: var(--primary-color);
 }
+
 .record-property {
   color: var(--secondary-color);
   margin-right: 5px;
 }
+
 .ssl-info {
   background-color: white;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 15px;
 }
+
 .ssl-status {
   display: flex;
   align-items: center;
@@ -237,45 +161,56 @@ h3 {
   font-size: 16px;
   margin-bottom: 15px;
 }
+
 #ssl-icon {
   font-size: 24px;
 }
+
 #ssl-status-text {
   font-weight: 500;
 }
+
 .status-secure {
   color: var(--success-color);
 }
+
 .status-warning {
   color: var(--warning-color);
 }
+
 .status-insecure {
   color: var(--danger-color);
 }
+
 table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 15px;
 }
+
 td {
   padding: 5px 0;
   border-bottom: 1px solid var(--border-color);
 }
+
 td:first-child {
   width: 30%;
   color: var(--primary-color);
   font-weight: 500;
 }
+
 #cert-chain {
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 12px;
 }
+
 .cert-chain-item {
   padding: 8px;
   margin-bottom: 5px;
   background-color: var(--background-color);
   border-radius: 4px;
 }
+
 .loader {
   border: 3px solid var(--border-color);
   border-top: 3px solid var(--secondary-color);
@@ -285,27 +220,12 @@ td:first-child {
   animation: spin 1s linear infinite;
   margin: 20px auto;
 }
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
 .hidden {
   display: none;
-}
-
-/* Special styling for email security records */
-#spf-records .record-item,
-#dmarc-records .record-item,
-#dkim-records .record-item,
-#bimi-records .record-item {
-  color: var(--primary-color);
-  font-weight: 500;
-}
-
-/* Special styling for nameserver IP addresses */
-.ns-ip {
-  display: inline-block;
-  color: #3498db;
-  font-weight: 500;
-  margin-left: 5px;
 }
