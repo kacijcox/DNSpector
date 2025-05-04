@@ -155,12 +155,7 @@
   <!-- Load main popup script last -->
   <script src="popup.js"></script>
   
-  <!-- Add script loading verification -->
-  <script>
-    console.log("Script loading verification:");
-    console.log("- SecurityUtils loaded:", !!window.SecurityUtils);
-    console.log("- SessionData loaded:", !!window.SessionData);
-    console.log("- SecurityAlerts loaded:", !!window.SecurityAlerts);
-  </script>
+  <!-- Load verification script instead of using inline script -->
+  <script src="verify-scripts.js"></script>
 </body>
 </html>
