@@ -135,9 +135,15 @@ function fetchDnsRecordsDirectly(domain, recordType, callback) {
         
         switch(recordType) {
           case 'NS':
-            // Nameserver records
-            displayText = answer.data;
-            break;
+            // Create a text node for the nameserver
+            const nameserverText = document.createTextNode(answer.data + ` (TTL: ${answer.TTL}s)`);
+            recordItem.appendChild(nameserverText);
+            
+            // Get IP for nameserver
+            fetchNameserverIP(answer.data, recordItem);
+            
+            // Return early since we've already set up the record item
+            return;
           case 'MX':
             // MX records have priority and target
             const [priority, host] = answer.data.split(' ');
@@ -262,4 +268,35 @@ function formatDate(dateStr) {
   } catch (e) {
     return dateStr;
   }
+}
+
+// Function to fetch IP address for a nameserver
+function fetchNameserverIP(nameserver, recordItem) {
+  // Clean the nameserver name if it has a trailing dot
+  const cleanNameserver = nameserver.endsWith('.') ? nameserver.slice(0, -1) : nameserver;
+  
+  // Fetch A record for the nameserver
+  const url = `https://dns.google/resolve?name=${encodeURIComponent(cleanNameserver)}&type=A`;
+  
+  fetch(url)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`DNS query failed: ${response.status} ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.Answer && data.Answer.length > 0) {
+        // Create IP span
+        const ipSpan = document.createElement('span');
+        ipSpan.className = 'ns-ip';
+        ipSpan.textContent = ` (${data.Answer[0].data})`;
+        
+        // Append to record item
+        recordItem.appendChild(ipSpan);
+      }
+    })
+    .catch(error => {
+      console.error(`Error fetching IP for nameserver ${nameserver}:`, error);
+    });
 }
