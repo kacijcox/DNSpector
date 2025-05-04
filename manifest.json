@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "DNS & SSL Inspector",
+  "name": "DNSpector",
   "version": "1.0",
   "description": "A developer-focused tool that shows DNS records and SSL certificate details",
   "permissions": [
