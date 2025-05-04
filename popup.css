@@ -209,36 +209,3 @@ td:first-child {
   font-weight: 500;
   margin-left: 5px;
 }
-
-.ns-ip-loading {
-  display: inline-block;
-  color: #95a5a6;
-  font-style: italic;
-  margin-left: 5px;
-  animation: pulse 1.5s infinite;
-}
-
-.ns-ip-error {
-  display: inline-block;
-  color: #e74c3c;
-  font-style: italic;
-  margin-left: 5px;
-}
-
-.ns-ip-not-found {
-  display: inline-block;
-  color: #f39c12;
-  font-style: italic;
-  margin-left: 5px;
-}
-
-.ttl-info {
-  color: #7f8c8d;
-  font-size: 0.9em;
-}
-
-@keyframes pulse {
-  0% { opacity: 0.4; }
-  50% { opacity: 1; }
-  100% { opacity: 0.4; }
-}

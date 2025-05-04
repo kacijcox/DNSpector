@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load SSL Certificate information
     loadSslCertificate(currentTab.url);
     
-    // Check for email security records
+    // Load email security records
     loadEmailSecurityRecords(domain);
   });
 });
@@ -181,12 +181,20 @@ function fetchDnsRecordsDirectly(domain, recordType, callback, targetContainer =
           
           switch(recordType) {
             case 'NS':
-              // Just display the nameserver record with TTL
-              recordItem.textContent = answer.data + ` (TTL: ${answer.TTL}s)`;
-              
-              // If the user wants IP addresses, we fetch and add them
+              // Create a text node for the nameserver without the TTL part first
+              const nameserverText = document.createTextNode(answer.data);
+              recordItem.appendChild(nameserverText);
+          
+              // Add TTL as a separate text node
+              const ttlText = document.createTextNode(` (TTL: ${answer.TTL}s)`);
+              recordItem.appendChild(ttlText);
+          
+              // Get IP for nameserver
               fetchNameserverIP(answer.data, recordItem);
-              break;
+          
+              // Add to container and return early since we've already set up the record item
+              recordsContainer.appendChild(recordItem);
+              return;
               
             case 'MX':
               // MX records have priority and target
@@ -351,11 +359,21 @@ function fetchNameserverIP(nameserver, recordItem) {
   const url = `https://dns.google/resolve?name=${encodeURIComponent(cleanNameserver)}&type=A`;
   
   fetch(url)
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`DNS query failed: ${response.status} ${response.statusText}`);
+      }
+      return response.json();
+    })
     .then(data => {
       if (data.Answer && data.Answer.length > 0) {
-        // Just add the IP to the existing text
-        recordItem.textContent += ` (IP: ${data.Answer[0].data})`;
+        // Create IP span
+        const ipSpan = document.createElement('span');
+        ipSpan.className = 'ns-ip';
+        ipSpan.textContent = ` (IP: ${data.Answer[0].data})`;
+        
+        // Append to record item
+        recordItem.appendChild(ipSpan);
       }
     })
     .catch(error => {
