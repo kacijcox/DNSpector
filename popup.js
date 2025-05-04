@@ -1,133 +1,70 @@
-// Function to run security check
-async function runSecurityCheck(domain, url) {
-    console.log('Running security check for:', domain);
-    
-    const securityLoader = document.getElementById('security-loader');
-    if (securityLoader) {
-      securityLoader.classList.remove('hidden');
-    }
-    
-    // Check if we have cached results in session
-    if (window.SecurityUtils && window.SecurityAlerts && window.SessionData) {
-      const cachedData = window.SessionData.getSecurityResults(domain);
-      if (cachedData && cachedData.results) {
-        console.log(`Using cached security results for ${domain}`);
-        window.SecurityAlerts.displaySecurityAlerts(
-          cachedData.results, 
-          document.getElementById('security-alerts')
-        );
-        
-        if (securityLoader) {
-          securityLoader.classList.add('hidden');
-        }
-        return;
-      }
-    }
-    
-    // Collect all the data we need for the security check
-    const dnsData = {};
-    const sslData = {};
-    
-    // Wait for DNS records to load
-    const recordTypes = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'CAA'];
-    
-    // Get DNS records from session data if available
-    if (window.SessionData) {
-      const cachedDnsData = window.SessionData.getDnsRecords(domain);
-      if (cachedDnsData && cachedDnsData.records) {
-        console.log('Using session DNS data for security checks:', cachedDnsData.records);
-        Object.assign(dnsData, cachedDnsData.records);
-      }
-    }
-    
-    // Get SSL data from session if available
-    if (window.SessionData) {
-      const cachedSslData = window.SessionData.getSslInfo(domain);
-      if (cachedSslData && cachedSslData.certificate) {
-        console.log('Using session SSL data for security checks:', cachedSslData.certificate);
-        Object.assign(sslData, cachedSslData.certificate);
-      }
-    }
-    
-    // If we don't have data in session yet, wait a bit and try to load directly
-    if (Object.keys(dnsData).length === 0 || Object.keys(sslData).length === 0) {
-      console.log('Missing data for security checks, fetching directly');
+document.addEventListener('DOMContentLoaded', function() {
+  // Tab functionality
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabPanes = document.querySelectorAll('.tab-pane');
+  
+  console.log("Tab buttons found:", tabButtons.length);
+  console.log("Tab panes found:", tabPanes.length);
+  
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      console.log("Tab clicked:", button.getAttribute('data-tab'));
       
-      // Wait for 2 seconds to allow other data to load
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Remove active class from all buttons and panes
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabPanes.forEach(pane => pane.classList.remove('active'));
       
-      // Load DNS records directly if needed
-      if (Object.keys(dnsData).length === 0) {
-        for (const type of recordTypes) {
-          await new Promise(resolve => {
-            chrome.runtime.sendMessage(
-              {
-                action: "getDnsRecords",
-                domain: domain,
-                recordType: type
-              }, 
-              function(response) {
-                if (response && response.success) {
-                  console.log(`Received ${type} DNS records for security checks:`, response.records);
-                  dnsData[type] = response.records;
-                } else {
-                  console.log(`Failed to get ${type} DNS records for security checks`);
-                }
-                resolve();
-              }
-            );
-          });
-        }
-      }
+      // Add active class to clicked button and corresponding pane
+      button.classList.add('active');
+      const tabId = button.getAttribute('data-tab');
+      const pane = document.getElementById(tabId);
       
-      // Load SSL data directly if needed
-      if (Object.keys(sslData).length === 0) {
-        await new Promise(resolve => {
-          chrome.runtime.sendMessage(
-            {
-              action: "getSslCertificate",
-              url: url
-            }, 
-            function(response) {
-              if (response && response.success) {
-                console.log('Received SSL certificate for security checks:', response.certificate);
-                Object.assign(sslData, response.certificate);
-              } else {
-                console.log('Failed to get SSL certificate for security checks');
-              }
-              resolve();
-            }
-          );
-        });
+      if (pane) {
+        pane.classList.add('active');
+      } else {
+        console.error("Tab pane not found:", tabId);
       }
-    }
+
+      // Always hide loaders
+      document.querySelectorAll('.loader').forEach(loader => {
+        loader.classList.add('hidden');
+      });
+    });
+  });
+
+  // Get current tab URL
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    const currentTab = tabs[0];
+    const url = new URL(currentTab.url);
+    const domain = url.hostname;
     
-    console.log('Final data for security checks:', { dnsData, sslData, domain, url });
+    // Display current URL
+    document.getElementById('current-url').textContent = domain;
     
-    // Now run the security checks
-    if (window.SecurityAlerts) {
-      const results = await window.SecurityAlerts.runSecurityChecks(dnsData, sslData, domain, url);
-      console.log('Security check results:', results);
-      
-      // Store results in session
-      if (window.SessionData) {
-        window.SessionData.storeSecurityResults(domain, results);
-      }
-      
-      // Display results
-      window.SecurityAlerts.displaySecurityAlerts(
-        results, 
-        document.getElementById('security-alerts')
-      );
-    } else {
-      // If SecurityAlerts is not available, show basic information
-      const securityAlertsElement = document.getElementById('security-alerts');
-      if (securityAlertsElement) {
-        securityAlertsElement.innerHTML = '<div class="security-status info"><span>Security module not loaded. Basic inspection only.</span></div>';
-      }
-    }
+    // Add favicon
+    const faviconContainer = document.getElementById('favicon-container');
+    const faviconImg = document.createElement('img');
+    faviconImg.src = `https://www.google.com/s2/favicons?domain=${domain}`;
+    faviconContainer.appendChild(faviconImg);
     
-    if (securityLoader) {
-      securityLoader.classList.add('hidden');
-    }
-  }
+    // For now, just set placeholder text in all record containers
+    const recordContainers = [
+      'a-records', 'aaaa-records', 'cname-records',
+      'mx-records', 'txt-records', 'caa-records'
+    ];
+    
+    recordContainers.forEach(containerId => {
+      const container = document.getElementById(containerId);
+      if (container) {
+        container.textContent = 'No records found';
+      }
+    });
+    
+    // Hide all loaders after a short delay to prevent infinite loading
+    setTimeout(() => {
+      document.querySelectorAll('.loader').forEach(loader => {
+        loader.classList.add('hidden');
+      });
+    }, 1000);
+  });
+});
