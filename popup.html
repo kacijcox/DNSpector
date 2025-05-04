@@ -14,12 +14,10 @@
         <div id="current-url"></div>
       </div>
     </header>
-
     <div class="tabs">
       <button class="tab-button active" data-tab="dns">DNS Records</button>
       <button class="tab-button" data-tab="ssl">SSL Certificate</button>
     </div>
-
     <div class="tab-content">
       <div id="dns" class="tab-pane active">
         <div class="loader" id="dns-loader"></div>
@@ -51,8 +49,16 @@
           <h3>CAA Records</h3>
           <div id="caa-records" class="records-list"></div>
         </div>
+        <div class="record-section">
+          <h3>SOA Records</h3>
+          <div id="soa-records" class="records-list"></div>
+        </div>
+        <div class="record-section">
+          <h3>PTR Records</h3>
+          <div id="ptr-records" class="records-list"></div>
+        </div>
+        <!-- Email security records will be dynamically added if found -->
       </div>
-
       <div id="ssl" class="tab-pane">
         <div class="loader" id="ssl-loader"></div>
         <div class="ssl-info">
@@ -93,7 +99,7 @@
       </div>
     </div>
   </div>
-  
+ 
   <!-- Load scripts -->
   <script src="popup.js"></script>
 </body>
