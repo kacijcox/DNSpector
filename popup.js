@@ -1,32 +1,4 @@
 document.addEventListener('DOMContentLoaded', function() {
-  // Tab functionality
-  const tabButtons = document.querySelectorAll('.tab-button');
-  const tabPanes = document.querySelectorAll('.tab-pane');
-  
-  console.log("Tab buttons found:", tabButtons.length);
-  console.log("Tab panes found:", tabPanes.length);
-  
-  tabButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      console.log("Tab clicked:", button.getAttribute('data-tab'));
-      
-      // Remove active class from all buttons and panes
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      tabPanes.forEach(pane => pane.classList.remove('active'));
-      
-      // Add active class to clicked button and corresponding pane
-      button.classList.add('active');
-      const tabId = button.getAttribute('data-tab');
-      const pane = document.getElementById(tabId);
-      
-      if (pane) {
-        pane.classList.add('active');
-      } else {
-        console.error("Tab pane not found:", tabId);
-      }
-    });
-  });
-
   // Get current tab URL
   chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
     const currentTab = tabs[0];
@@ -46,9 +18,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Load DNS information
     loadDnsRecords(domain);
-    
-    // Load SSL Certificate information
-    loadSslCertificate(currentTab.url);
   });
 });
 
@@ -59,7 +28,7 @@ function loadDnsRecords(domain) {
   const dnsLoader = document.getElementById('dns-loader');
   
   // Define record types to fetch
-  const recordTypes = ['NS', 'A', 'AAAA', 'CNAME', 'MX', 'TXT', 'CAA'];
+  const recordTypes = ['NS', 'A', 'AAAA', 'CNAME', 'MX', 'TXT', 'CAA', 'SOA', 'PTR'];
   
   // Initialize all record containers with "Loading..." text
   recordTypes.forEach(type => {
@@ -162,6 +131,23 @@ function fetchDnsRecordsDirectly(domain, recordType, callback) {
             displayText = `Points to: ${answer.data}`;
             break;
             
+          case 'SOA':
+            // SOA records have multiple fields
+            const soaParts = answer.data.split(' ');
+            if (soaParts.length >= 7) {
+              displayText = `Primary NS: ${soaParts[0]}, Admin: ${soaParts[1]}, ` +
+                           `Serial: ${soaParts[2]}, Refresh: ${soaParts[3]}s, ` +
+                           `Retry: ${soaParts[4]}s, Expire: ${soaParts[5]}s, ` +
+                           `Minimum: ${soaParts[6]}s`;
+            } else {
+              displayText = answer.data;
+            }
+            break;
+            
+          case 'PTR':
+            displayText = `Hostname: ${answer.data}`;
+            break;
+            
           default:
             displayText = answer.data;
         }
@@ -205,93 +191,4 @@ function fetchNameserverIP(nameserver, recordItem) {
     .catch(error => {
       console.error(`Error fetching IP for nameserver ${nameserver}:`, error);
     });
-}
-
-// Function to load SSL certificate information
-function loadSslCertificate(url) {
-  console.log('Loading SSL certificate for:', url);
-  
-  const sslLoader = document.getElementById('ssl-loader');
-  
-  // Basic check if the URL is using HTTPS
-  const isSecure = url.startsWith('https://');
-  
-  // Create SSL certificate data based on URL properties
-  const domain = new URL(url).hostname;
-  const certData = {
-    secure: isSecure,
-    protocol: isSecure ? "TLS" : "None",
-    issuer: isSecure ? "Certificate Authority" : "None",
-    validFrom: isSecure ? new Date().toISOString() : "N/A",
-    validUntil: isSecure ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : "N/A"
-  };
-  
-  // Update the UI with the SSL information
-  updateSslDisplay(certData, url);
-  
-  // Hide the loader
-  if (sslLoader) {
-    sslLoader.classList.add('hidden');
-  }
-}
-
-function updateSslDisplay(certData, url) {
-  // Update UI with certificate data
-  const domain = new URL(url).hostname;
-  
-  document.getElementById('cert-subject').textContent = domain;
-  document.getElementById('cert-issuer').textContent = certData.issuer;
-  document.getElementById('cert-valid-from').textContent = formatDate(certData.validFrom);
-  document.getElementById('cert-valid-until').textContent = formatDate(certData.validUntil);
-  document.getElementById('tls-version').textContent = certData.protocol;
-  
-  // Set SSL status
-  const sslIcon = document.getElementById('ssl-icon');
-  const sslStatusText = document.getElementById('ssl-status-text');
-  
-  if (certData.secure) {
-    sslIcon.textContent = '🔒';
-    sslIcon.className = 'status-secure';
-    sslStatusText.textContent = 'Connection is secure';
-    sslStatusText.className = 'status-secure';
-  } else {
-    sslIcon.textContent = '⚠️';
-    sslIcon.className = 'status-warning';
-    sslStatusText.textContent = 'Not using HTTPS';
-    sslStatusText.className = 'status-warning';
-  }
-  
-  // Display certificate chain (simplified for now)
-  const chainContainer = document.getElementById('cert-chain');
-  chainContainer.innerHTML = '';
-  
-  // Show a simple chain for now
-  const certificates = ['Root Certificate Authority', 'Intermediate CA', domain];
-  certificates.forEach((cert, index) => {
-    const certItem = document.createElement('div');
-    certItem.className = 'cert-chain-item';
-    certItem.textContent = cert;
-    chainContainer.appendChild(certItem);
-    
-    // Add arrow except for the last item
-    if (index < certificates.length - 1) {
-      const arrow = document.createElement('div');
-      arrow.textContent = '↓';
-      arrow.style.textAlign = 'center';
-      arrow.style.margin = '5px 0';
-      chainContainer.appendChild(arrow);
-    }
-  });
-}
-
-// Helper function to format date strings
-function formatDate(dateStr) {
-  if (dateStr === 'N/A') return dateStr;
-  
-  try {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-  } catch (e) {
-    return dateStr;
-  }
 }
