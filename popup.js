@@ -135,24 +135,19 @@ function fetchDnsRecordsDirectly(domain, recordType, callback) {
         
         switch(recordType) {
           case 'NS':
-        // Create a text node for the nameserver without the TTL part first
-        const nameserverText = document.createTextNode(answer.data);
-        recordItem.appendChild(nameserverText);
-    
-        // Add TTL as a separate text node
-        const ttlText = document.createTextNode(` (TTL: ${answer.TTL}s)`);
-        recordItem.appendChild(ttlText);
-    
-        // Get IP for nameserver
-        fetchNameserverIP(answer.data, recordItem);
-    
-        // Return early since we've already set up the record item
-         return;
+            // Just display the nameserver record with TTL
+            recordItem.textContent = answer.data + ` (TTL: ${answer.TTL}s)`;
+            
+            // If the user wants IP addresses, we fetch and add them
+            fetchNameserverIP(answer.data, recordItem);
+            break;
+            
           case 'MX':
             // MX records have priority and target
             const [priority, host] = answer.data.split(' ');
             displayText = `Priority: ${priority}, Host: ${host}`;
             break;
+            
           case 'TXT':
             // Remove quotes from TXT records if present
             let txtValue = answer.data;
@@ -161,18 +156,24 @@ function fetchDnsRecordsDirectly(domain, recordType, callback) {
             }
             displayText = txtValue;
             break;
+            
           case 'CNAME':
             // Clearly format CNAME records
             displayText = `Points to: ${answer.data}`;
             break;
+            
           default:
             displayText = answer.data;
         }
         
-        // Add TTL info
-        displayText += ` (TTL: ${answer.TTL}s)`;
+        // Only set textContent if it hasn't been set already (NS case)
+        if (recordType !== 'NS') {
+          recordItem.textContent = displayText;
+          
+          // Add TTL info
+          recordItem.textContent += ` (TTL: ${answer.TTL}s)`;
+        }
         
-        recordItem.textContent = displayText;
         recordsContainer.appendChild(recordItem);
       });
     })
@@ -182,6 +183,27 @@ function fetchDnsRecordsDirectly(domain, recordType, callback) {
     })
     .finally(() => {
       if (callback) callback();
+    });
+}
+
+// Function to fetch IP address for a nameserver
+function fetchNameserverIP(nameserver, recordItem) {
+  // Clean the nameserver name if it has a trailing dot
+  const cleanNameserver = nameserver.endsWith('.') ? nameserver.slice(0, -1) : nameserver;
+  
+  // Fetch A record for the nameserver
+  const url = `https://dns.google/resolve?name=${encodeURIComponent(cleanNameserver)}&type=A`;
+  
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.Answer && data.Answer.length > 0) {
+        // Just add the IP to the existing text
+        recordItem.textContent += ` (IP: ${data.Answer[0].data})`;
+      }
+    })
+    .catch(error => {
+      console.error(`Error fetching IP for nameserver ${nameserver}:`, error);
     });
 }
 
@@ -272,35 +294,4 @@ function formatDate(dateStr) {
   } catch (e) {
     return dateStr;
   }
-}
-
-// Function to fetch IP address for a nameserver
-function fetchNameserverIP(nameserver, recordItem) {
-  // Clean the nameserver name if it has a trailing dot
-  const cleanNameserver = nameserver.endsWith('.') ? nameserver.slice(0, -1) : nameserver;
-  
-  // Fetch A record for the nameserver
-  const url = `https://dns.google/resolve?name=${encodeURIComponent(cleanNameserver)}&type=A`;
-  
-  fetch(url)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`DNS query failed: ${response.status} ${response.statusText}`);
-      }
-      return response.json();
-    })
-    .then(data => {
-      if (data.Answer && data.Answer.length > 0) {
-        // Create IP span
-        const ipSpan = document.createElement('span');
-        ipSpan.className = 'ns-ip';
-        ipSpan.textContent = ` (${data.Answer[0].data})`;
-        
-        // Append to record item
-        recordItem.appendChild(ipSpan);
-      }
-    })
-    .catch(error => {
-      console.error(`Error fetching IP for nameserver ${nameserver}:`, error);
-    });
 }
