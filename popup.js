@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
+  // Initialize the DNS Service
+  const dnsService = new DnsService();
+  
   // Tab functionality
   const tabButtons = document.querySelectorAll('.tab-button');
   const tabPanes = document.querySelectorAll('.tab-pane');
@@ -44,16 +47,16 @@ document.addEventListener('DOMContentLoaded', function() {
     faviconImg.src = `https://www.google.com/s2/favicons?domain=${domain}`;
     faviconContainer.appendChild(faviconImg);
     
-    // Load DNS information
-    loadDnsRecords(domain);
+    // Load DNS information using the DnsService
+    loadDnsRecords(domain, dnsService);
     
     // Load SSL Certificate information
     loadSslCertificate(currentTab.url);
   });
 });
 
-// Function to fetch DNS records directly from Google's DNS-over-HTTPS API
-function loadDnsRecords(domain) {
+// Function to load DNS records using DnsService
+async function loadDnsRecords(domain, dnsService) {
   console.log('Loading DNS records for:', domain);
   
   const dnsLoader = document.getElementById('dns-loader');
@@ -71,18 +74,26 @@ function loadDnsRecords(domain) {
     }
   });
   
-  // Fetch each record type
+  // Create a counter to track completed requests
   let completedRequests = 0;
+  
+  // Fetch records for each type
   recordTypes.forEach(type => {
-    fetchDnsRecordsDirectly(domain, type, () => {
-      completedRequests++;
-      // Hide loader once all requests are complete
-      if (completedRequests === recordTypes.length) {
-        if (dnsLoader) {
+    fetchAndDisplayRecords(domain, type, dnsService)
+      .then(() => {
+        completedRequests++;
+        // Hide loader once all requests are complete
+        if (completedRequests === recordTypes.length && dnsLoader) {
           dnsLoader.classList.add('hidden');
         }
-      }
-    });
+      })
+      .catch(error => {
+        console.error(`Error fetching ${type} records:`, error);
+        completedRequests++;
+        if (completedRequests === recordTypes.length && dnsLoader) {
+          dnsLoader.classList.add('hidden');
+        }
+      });
   });
   
   // Fallback to hide loader after 10 seconds
@@ -93,92 +104,141 @@ function loadDnsRecords(domain) {
   }, 10000);
 }
 
-// Function to fetch DNS records directly from Google DNS-over-HTTPS API
-function fetchDnsRecordsDirectly(domain, recordType, callback) {
+// Function to fetch and display DNS records for a specific type
+async function fetchAndDisplayRecords(domain, recordType, dnsService) {
   console.log(`Fetching ${recordType} records for:`, domain);
   
   const recordsContainer = document.getElementById(`${recordType.toLowerCase()}-records`);
   if (!recordsContainer) {
     console.error(`Container for ${recordType.toLowerCase()}-records not found!`);
-    if (callback) callback();
     return;
   }
   
-  // Using Google's DNS-over-HTTPS API directly - CORS enabled
-  const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${recordType}`;
-  
-  fetch(url)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`DNS query failed: ${response.status} ${response.statusText}`);
-      }
-      return response.json();
-    })
-    .then(data => {
-      console.log(`Received ${recordType} records:`, data);
-      
-      if (!data.Answer || data.Answer.length === 0) {
-        recordsContainer.textContent = 'No records found';
-        return;
-      }
-      
-      // Clear existing content
-      recordsContainer.innerHTML = '';
-      
-      // Add records to container
-      data.Answer.forEach(answer => {
-        const recordItem = document.createElement('div');
-        recordItem.className = 'record-item';
-        
-        // Format record data based on record type
-        let displayText = '';
-        
-        switch(recordType) {
-          case 'NS':
-            // Create a text node for the nameserver
-            const nameserverText = document.createTextNode(answer.data + ` (TTL: ${answer.TTL}s)`);
-            recordItem.appendChild(nameserverText);
-            
-            // Get IP for nameserver
-            fetchNameserverIP(answer.data, recordItem);
-            
-            // Return early since we've already set up the record item
-            return;
-          case 'MX':
-            // MX records have priority and target
-            const [priority, host] = answer.data.split(' ');
-            displayText = `Priority: ${priority}, Host: ${host}`;
-            break;
-          case 'TXT':
-            // Remove quotes from TXT records if present
-            let txtValue = answer.data;
-            if (txtValue.startsWith('"') && txtValue.endsWith('"')) {
-              txtValue = txtValue.slice(1, -1);
-            }
-            displayText = txtValue;
-            break;
-          case 'CNAME':
-            // Clearly format CNAME records
-            displayText = `Points to: ${answer.data}`;
-            break;
-          default:
-            displayText = answer.data;
-        }
-        
-        // Add TTL info
-        displayText += ` (TTL: ${answer.TTL}s)`;
-        
-        recordItem.textContent = displayText;
-        recordsContainer.appendChild(recordItem);
-      });
-    })
-    .catch(error => {
-      console.error(`Error fetching ${recordType} records:`, error);
-      recordsContainer.textContent = `Error: ${error.message}`;
-    })
-    .finally(() => {
-      if (callback) callback();
+  try {
+    // Use the DnsService to fetch records
+    const response = await dnsService.fetchRecords(domain, recordType);
+    console.log(`Received ${recordType} records:`, response);
+    
+    // Clear the container
+    recordsContainer.innerHTML = '';
+    
+    // Check if we have records
+    if (!response.records || response.records.length === 0) {
+      recordsContainer.textContent = 'No records found';
+      return;
+    }
+    
+    // Display the records based on type
+    response.records.forEach(record => {
+      displayRecord(recordType, record, recordsContainer);
     });
+  } catch (error) {
+    console.error(`Error fetching ${recordType} records:`, error);
+    recordsContainer.textContent = `Error: ${error.message}`;
+  }
+}
+
+// Function to display a DNS record in the UI
+function displayRecord(recordType, record, container) {
+  const recordItem = document.createElement('div');
+  recordItem.className = 'record-item';
+  
+  switch (recordType) {
+    case 'NS':
+      // Create nameserver record display
+      const nameserverText = document.createTextNode(record.nameserver);
+      recordItem.appendChild(nameserverText);
+      
+      // Add TTL information
+      const ttlSpan = document.createElement('span');
+      ttlSpan.className = 'ttl-info';
+      ttlSpan.textContent = ` (TTL: ${record.ttl}s)`;
+      recordItem.appendChild(ttlSpan);
+      
+      // Add loading indicator for IP
+      const ipLoadingSpan = document.createElement('span');
+      ipLoadingSpan.className = 'ns-ip-loading';
+      ipLoadingSpan.textContent = ' (Loading IP...)';
+      recordItem.appendChild(ipLoadingSpan);
+      
+      // Fetch the IP for this nameserver
+      fetchNameserverIP(record.nameserver, recordItem, ipLoadingSpan);
+      break;
+      
+    case 'A':
+    case 'AAAA':
+      recordItem.textContent = `${record.ip} (TTL: ${record.ttl}s)`;
+      break;
+      
+    case 'MX':
+      recordItem.textContent = `Priority: ${record.priority}, Host: ${record.host} (TTL: ${record.ttl}s)`;
+      break;
+      
+    case 'TXT':
+      recordItem.textContent = `${record.text} (TTL: ${record.ttl}s)`;
+      break;
+      
+    case 'CNAME':
+      recordItem.textContent = `Points to: ${record.target} (TTL: ${record.ttl}s)`;
+      break;
+      
+    case 'CAA':
+      recordItem.textContent = `Flags: ${record.flags}, Tag: ${record.tag}, Value: ${record.value} (TTL: ${record.ttl}s)`;
+      break;
+      
+    default:
+      recordItem.textContent = `${JSON.stringify(record.data)} (TTL: ${record.ttl}s)`;
+  }
+  
+  container.appendChild(recordItem);
+}
+
+// Function to fetch IP address for a nameserver
+async function fetchNameserverIP(nameserver, recordItem, loadingSpan) {
+  // Clean the nameserver name if it has a trailing dot
+  const cleanNameserver = nameserver.endsWith('.') ? nameserver.slice(0, -1) : nameserver;
+  
+  try {
+    // Create a new instance of DnsService to use for this lookup
+    const dnsService = new DnsService();
+    
+    // Fetch A record for the nameserver
+    const response = await dnsService.fetchRecords(cleanNameserver, 'A');
+    
+    // Remove the loading span
+    if (loadingSpan && loadingSpan.parentNode) {
+      loadingSpan.parentNode.removeChild(loadingSpan);
+    }
+    
+    if (response.records && response.records.length > 0) {
+      // Create IP span with proper styling
+      const ipSpan = document.createElement('span');
+      ipSpan.className = 'ns-ip';
+      ipSpan.textContent = ` (IP: ${response.records[0].ip})`;
+      
+      // Append to record item
+      recordItem.appendChild(ipSpan);
+    } else {
+      // No IP found
+      const noIpSpan = document.createElement('span');
+      noIpSpan.className = 'ns-ip-not-found';
+      noIpSpan.textContent = ' (No IP found)';
+      recordItem.appendChild(noIpSpan);
+    }
+  } catch (error) {
+    console.error(`Error fetching IP for nameserver ${nameserver}:`, error);
+    
+    // Remove the loading span
+    if (loadingSpan && loadingSpan.parentNode) {
+      loadingSpan.parentNode.removeChild(loadingSpan);
+    }
+    
+    // Add error message
+    const errorSpan = document.createElement('span');
+    errorSpan.className = 'ns-ip-error';
+    errorSpan.textContent = ' (IP lookup failed)';
+    recordItem.appendChild(errorSpan);
+  }
 }
 
 // Function to load SSL certificate information
@@ -268,35 +328,4 @@ function formatDate(dateStr) {
   } catch (e) {
     return dateStr;
   }
-}
-
-// Function to fetch IP address for a nameserver
-function fetchNameserverIP(nameserver, recordItem) {
-  // Clean the nameserver name if it has a trailing dot
-  const cleanNameserver = nameserver.endsWith('.') ? nameserver.slice(0, -1) : nameserver;
-  
-  // Fetch A record for the nameserver
-  const url = `https://dns.google/resolve?name=${encodeURIComponent(cleanNameserver)}&type=A`;
-  
-  fetch(url)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`DNS query failed: ${response.status} ${response.statusText}`);
-      }
-      return response.json();
-    })
-    .then(data => {
-      if (data.Answer && data.Answer.length > 0) {
-        // Create IP span
-        const ipSpan = document.createElement('span');
-        ipSpan.className = 'ns-ip';
-        ipSpan.textContent = ` (${data.Answer[0].data})`;
-        
-        // Append to record item
-        recordItem.appendChild(ipSpan);
-      }
-    })
-    .catch(error => {
-      console.error(`Error fetching IP for nameserver ${nameserver}:`, error);
-    });
 }
