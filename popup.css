@@ -1,42 +1,231 @@
-/* Add these styles to your existing popup.css file */
+:root {
+  --primary-color: #2c3e50;
+  --secondary-color: #3498db;
+  --background-color: #f9f9f9;
+  --border-color: #e0e0e0;
+  --text-color: #333;
+  --success-color: #27ae60;
+  --warning-color: #f39c12;
+  --danger-color: #e74c3c;
+}
 
-/* Special styling for nameserver IP addresses */
-.ns-ip {
-  display: inline-block;
-  color: #3498db;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-size: 14px;
+  min-width: 400px;
+  max-width: 100%;
+}
+
+.container {
+  padding: 15px;
+}
+
+header {
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+h1 {
+  font-size: 18px;
+  color: var(--primary-color);
+  margin-bottom: 8px;
+}
+
+.site-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--secondary-color);
+}
+
+#favicon-container {
+  width: 16px;
+  height: 16px;
+}
+
+#favicon-container img {
+  width: 100%;
+  height: 100%;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 15px;
+}
+
+.tab-button {
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-color);
+  position: relative;
+  transition: color 0.3s;
+}
+
+.tab-button:hover {
+  color: var(--secondary-color);
+}
+
+.tab-button.active {
+  color: var(--secondary-color);
+  font-weight: 600;
+}
+
+.tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--secondary-color);
+}
+
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+.record-section {
+  margin-bottom: 15px;
+}
+
+h3 {
+  font-size: 14px;
+  color: var(--primary-color);
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.records-list {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  background-color: white;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.record-item {
+  margin-bottom: 5px;
+  padding-bottom: 5px;
+  border-bottom: 1px dotted var(--border-color);
+}
+
+.record-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* Special styling for nameserver records */
+#ns-records .record-item {
   font-weight: 500;
-  margin-left: 5px;
+  color: var(--primary-color);
 }
 
-.ns-ip-loading {
-  display: inline-block;
-  color: #95a5a6;
-  font-style: italic;
-  margin-left: 5px;
-  animation: pulse 1.5s infinite;
+.record-property {
+  color: var(--secondary-color);
+  margin-right: 5px;
 }
 
-.ns-ip-error {
-  display: inline-block;
-  color: #e74c3c;
-  font-style: italic;
-  margin-left: 5px;
+.ssl-info {
+  background-color: white;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 15px;
 }
 
-.ns-ip-not-found {
-  display: inline-block;
-  color: #f39c12;
-  font-style: italic;
-  margin-left: 5px;
+.ssl-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  margin-bottom: 15px;
 }
 
-.ttl-info {
-  color: #7f8c8d;
-  font-size: 0.9em;
+#ssl-icon {
+  font-size: 24px;
 }
 
-@keyframes pulse {
-  0% { opacity: 0.4; }
-  50% { opacity: 1; }
-  100% { opacity: 0.4; }
+#ssl-status-text {
+  font-weight: 500;
+}
+
+.status-secure {
+  color: var(--success-color);
+}
+
+.status-warning {
+  color: var(--warning-color);
+}
+
+.status-insecure {
+  color: var(--danger-color);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 15px;
+}
+
+td {
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+td:first-child {
+  width: 30%;
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+#cert-chain {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+}
+
+.cert-chain-item {
+  padding: 8px;
+  margin-bottom: 5px;
+  background-color: var(--background-color);
+  border-radius: 4px;
+}
+
+.loader {
+  border: 3px solid var(--border-color);
+  border-top: 3px solid var(--secondary-color);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.hidden {
+  display: none;
 }
