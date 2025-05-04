@@ -136,6 +136,12 @@ h3 {
   border-bottom: none;
 }
 
+/* Special styling for nameserver records */
+#ns-records .record-item {
+  font-weight: 500;
+  color: var(--primary-color);
+}
+
 .record-property {
   color: var(--secondary-color);
   margin-right: 5px;

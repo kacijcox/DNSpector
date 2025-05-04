@@ -59,7 +59,7 @@ function loadDnsRecords(domain) {
   const dnsLoader = document.getElementById('dns-loader');
   
   // Define record types to fetch
-  const recordTypes = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'CAA'];
+  const recordTypes = ['NS', 'A', 'AAAA', 'CNAME', 'MX', 'TXT', 'CAA'];
   
   // Initialize all record containers with "Loading..." text
   recordTypes.forEach(type => {
@@ -134,6 +134,10 @@ function fetchDnsRecordsDirectly(domain, recordType, callback) {
         let displayText = '';
         
         switch(recordType) {
+          case 'NS':
+            // Nameserver records
+            displayText = answer.data;
+            break;
           case 'MX':
             // MX records have priority and target
             const [priority, host] = answer.data.split(' ');
