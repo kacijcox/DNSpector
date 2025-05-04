@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "DNSpector",
   "version": "1.0",
-  "description": "A developer-focused tool that shows DNS records and SSL certificate details",
+  "description": "A developer-focused tool that shows DNS records",
   "permissions": [
     "activeTab"
   ],
