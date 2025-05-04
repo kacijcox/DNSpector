@@ -6,113 +6,98 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="window">
-    <!-- Added titlebar for drag functionality -->
-    <div class="titlebar" id="drag-handle">
-      <div class="window-controls">
-        <div class="window-control minimize" id="minimize-btn"></div>
-        <div class="window-control maximize" id="maximize-btn"></div>
-        <div class="window-control close" id="close-btn"></div>
+  <div class="container">
+    <header>
+      <h1>DNSpector</h1>
+      <div class="site-info">
+        <div id="favicon-container"></div>
+        <div id="current-url"></div>
       </div>
-      <div class="titlebar-text">DNSpector</div>
+    </header>
+    <div class="tabs">
+      <button class="tab-button active" data-tab="dns">DNS Records</button>
+      <button class="tab-button" data-tab="ssl">SSL Certificate</button>
     </div>
-    
-    <div class="container">
-      <header>
-        <h1>DNSpector</h1>
-        <div class="site-info">
-          <div id="favicon-container"></div>
-          <div id="current-url"></div>
+    <div class="tab-content">
+      <div id="dns" class="tab-pane active">
+        <div class="loader" id="dns-loader"></div>
+        <div class="record-section">
+          <h3>Nameservers (NS Records)</h3>
+          <div id="ns-records" class="records-list"></div>
         </div>
-      </header>
-      <div class="tabs">
-        <button class="tab-button active" data-tab="dns">DNS Records</button>
-        <button class="tab-button" data-tab="ssl">SSL Certificate</button>
+        <div class="record-section">
+          <h3>A Records</h3>
+          <div id="a-records" class="records-list"></div>
+        </div>
+        <div class="record-section">
+          <h3>AAAA Records</h3>
+          <div id="aaaa-records" class="records-list"></div>
+        </div>
+        <div class="record-section">
+          <h3>CNAME Records</h3>
+          <div id="cname-records" class="records-list"></div>
+        </div>
+        <div class="record-section">
+          <h3>MX Records</h3>
+          <div id="mx-records" class="records-list"></div>
+        </div>
+        <div class="record-section">
+          <h3>TXT Records</h3>
+          <div id="txt-records" class="records-list"></div>
+        </div>
+        <div class="record-section">
+          <h3>CAA Records</h3>
+          <div id="caa-records" class="records-list"></div>
+        </div>
+        <div class="record-section">
+          <h3>SOA Records</h3>
+          <div id="soa-records" class="records-list"></div>
+        </div>
+        <div class="record-section">
+          <h3>PTR Records</h3>
+          <div id="ptr-records" class="records-list"></div>
+        </div>
+        <!-- Email security records will be dynamically added if found -->
       </div>
-      <div class="tab-content">
-        <div id="dns" class="tab-pane active">
-          <div class="loader" id="dns-loader"></div>
-          <div class="record-section">
-            <h3>Nameservers (NS Records)</h3>
-            <div id="ns-records" class="records-list"></div>
+      <div id="ssl" class="tab-pane">
+        <div class="loader" id="ssl-loader"></div>
+        <div class="ssl-info">
+          <div class="ssl-status">
+            <span id="ssl-icon"></span>
+            <span id="ssl-status-text"></span>
           </div>
-          <div class="record-section">
-            <h3>A Records</h3>
-            <div id="a-records" class="records-list"></div>
+          <div class="certificate-section">
+            <h3>Certificate Details</h3>
+            <table id="cert-details">
+              <tr>
+                <td>Issued To:</td>
+                <td id="cert-subject"></td>
+              </tr>
+              <tr>
+                <td>Issued By:</td>
+                <td id="cert-issuer"></td>
+              </tr>
+              <tr>
+                <td>Valid From:</td>
+                <td id="cert-valid-from"></td>
+              </tr>
+              <tr>
+                <td>Valid Until:</td>
+                <td id="cert-valid-until"></td>
+              </tr>
+              <tr>
+                <td>TLS Version:</td>
+                <td id="tls-version"></td>
+              </tr>
+            </table>
           </div>
-          <div class="record-section">
-            <h3>AAAA Records</h3>
-            <div id="aaaa-records" class="records-list"></div>
-          </div>
-          <div class="record-section">
-            <h3>CNAME Records</h3>
-            <div id="cname-records" class="records-list"></div>
-          </div>
-          <div class="record-section">
-            <h3>MX Records</h3>
-            <div id="mx-records" class="records-list"></div>
-          </div>
-          <div class="record-section">
-            <h3>TXT Records</h3>
-            <div id="txt-records" class="records-list"></div>
-          </div>
-          <div class="record-section">
-            <h3>CAA Records</h3>
-            <div id="caa-records" class="records-list"></div>
-          </div>
-          <div class="record-section">
-            <h3>SOA Records</h3>
-            <div id="soa-records" class="records-list"></div>
-          </div>
-          <div class="record-section">
-            <h3>PTR Records</h3>
-            <div id="ptr-records" class="records-list"></div>
-          </div>
-          <!-- Email security records will be dynamically added if found -->
-        </div>
-        <div id="ssl" class="tab-pane">
-          <div class="loader" id="ssl-loader"></div>
-          <div class="ssl-info">
-            <div class="ssl-status">
-              <span id="ssl-icon"></span>
-              <span id="ssl-status-text"></span>
-            </div>
-            <div class="certificate-section">
-              <h3>Certificate Details</h3>
-              <table id="cert-details">
-                <tr>
-                  <td>Issued To:</td>
-                  <td id="cert-subject"></td>
-                </tr>
-                <tr>
-                  <td>Issued By:</td>
-                  <td id="cert-issuer"></td>
-                </tr>
-                <tr>
-                  <td>Valid From:</td>
-                  <td id="cert-valid-from"></td>
-                </tr>
-                <tr>
-                  <td>Valid Until:</td>
-                  <td id="cert-valid-until"></td>
-                </tr>
-                <tr>
-                  <td>TLS Version:</td>
-                  <td id="tls-version"></td>
-                </tr>
-              </table>
-            </div>
-            <div class="certificate-section">
-              <h3>Certificate Chain</h3>
-              <div id="cert-chain"></div>
-            </div>
+          <div class="certificate-section">
+            <h3>Certificate Chain</h3>
+            <div id="cert-chain"></div>
           </div>
         </div>
       </div>
     </div>
-    
-    <!-- Added resize handle -->
-    <div class="resize-handle" id="resize-handle"></div>
   </div>
  
   <!-- Load scripts -->
