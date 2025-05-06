@@ -42,10 +42,15 @@ function loadDnsRecords(domain) {
 
   // Define DNS providers
   const dnsProviders = [
-    { name: 'Google', url: 'https://dns.google/resolve?name=' },
-    { name: 'Cloudflare', url: 'https://cloudflare-dns.com/dns-query?name=' },
-    { name: 'Quad9', url: 'https://dns.quad9.net/dns-query?name=' }
-  ];
+    {
+      name: 'Google',
+      fetchFunction: fetchFromGoogleDNS
+    },
+    {
+      name: 'Cloudflare',
+      fetchFunction: fetchFromCloudflare
+    }
+    ];
 
   
   
@@ -59,17 +64,16 @@ function loadDnsRecords(domain) {
     allRecords[type] = [];
   });
 
-  // Fetch records from each provider
-  dnsProviders.forEach(type => {
-    recordTypes.forEach(provider => {
-      provider.fetchFunction(domain, type)
-      .then(records => {
-        // Store records from this provider
-        if (records && records.length > 0) {
-          const recordsWithProvider = records.map(record => ({
-            ...record,
-            provider: provider.name
-          }));
+  dnsProviders.forEach(provider => {  
+    recordTypes.forEach(type => {
+      provider.fetchFunction(domain, type)  
+        .then(records => {
+          // Store records from this provider
+          if (records && records.length > 0) {
+            const recordsWithProvider = records.map(record => ({
+              ...record,
+              provider: provider.name
+            }));
   
    // Add to our collection
    allRecords[type] = [...allRecords[type], ...recordsWithProvider];
