@@ -42,17 +42,15 @@ function loadDnsRecords(domain) {
 
   // Define DNS providers
   const dnsProviders = [
-    {
-      name: 'Google',
-      fetchFunction: fetchFromGoogleDNS
+    { 
+      name: 'Google DNS', // CHANGE: Updated provider name for better clarity
+      fetchFunction: fetchFromGoogleDNS 
     },
-    {
-      name: 'Cloudflare',
-      fetchFunction: fetchFromCloudflare
+    { 
+      name: 'Cloudflare', 
+      fetchFunction: fetchFromCloudflare 
     }
-    ];
-
-  
+  ];
   
   // Fetch each record type
   let completedRequests = 0;
@@ -64,9 +62,10 @@ function loadDnsRecords(domain) {
     allRecords[type] = [];
   });
 
-  dnsProviders.forEach(provider => {  
+  // Fetch records from each provider
+  dnsProviders.forEach(provider => {
     recordTypes.forEach(type => {
-      provider.fetchFunction(domain, type)  
+      provider.fetchFunction(domain, type)
         .then(records => {
           // Store records from this provider
           if (records && records.length > 0) {
@@ -74,314 +73,319 @@ function loadDnsRecords(domain) {
               ...record,
               provider: provider.name
             }));
-  
-   // Add to our collection
-   allRecords[type] = [...allRecords[type], ...recordsWithProvider];
-  }
-})
-.catch(error => {
-  console.error(`Error fetching ${type} records from ${provider.name}:`, error);
-})
-.finally(() => {
-  completedRequests++;
-  
-  // Check if all requests are complete
-  if (completedRequests === totalRequests) {
-    // Display the aggregated results
-    displayAggregatedRecords(domain, allRecords);
     
-    // Hide the loader
+            // Add to our collection
+            allRecords[type] = [...allRecords[type], ...recordsWithProvider];
+          }
+        })
+        .catch(error => {
+          console.error(`Error fetching ${type} records from ${provider.name}:`, error);
+        })
+        .finally(() => {
+          completedRequests++;
+          
+          // Check if all requests are complete
+          if (completedRequests === totalRequests) {
+            // Display the aggregated results
+            displayAggregatedRecords(domain, allRecords);
+            
+            // Hide the loader
+            if (dnsLoader) {
+              dnsLoader.classList.add('hidden');
+            }
+          }
+        });
+    });
+  });
+
+  // Fallback to hide loader after 10 seconds
+  setTimeout(() => {
     if (dnsLoader) {
       dnsLoader.classList.add('hidden');
     }
-  }
-});
-});
-});
-
-// Fallback to hide loader after 10 seconds
-setTimeout(() => {
-if (dnsLoader) {
-dnsLoader.classList.add('hidden');
-}
-}, 10000);
+  }, 10000);
 }
 
 // Function to fetch DNS records from Google DNS
 function fetchFromGoogleDNS(domain, recordType) {
-return new Promise((resolve, reject) => {
-const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${recordType}`;
+  return new Promise((resolve, reject) => {
+    const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${recordType}`;
 
-fetch(url)
-.then(response => {
-if (!response.ok) {
-  throw new Error(`DNS query failed: ${response.status} ${response.statusText}`);
-}
-return response.json();
-})
-.then(data => {
-console.log(`Received ${recordType} records from Google DNS:`, data);
+    fetch(url)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`DNS query failed: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log(`Received ${recordType} records from Google DNS:`, data);
 
-if (!data.Answer || data.Answer.length === 0) {
-  resolve([]);
-  return;
-}
+        if (!data.Answer || data.Answer.length === 0) {
+          resolve([]);
+          return;
+        }
 
-// Parse the records
-const records = data.Answer.map(answer => ({
-  name: answer.name,
-  type: recordType,
-  data: answer.data,
-  ttl: answer.TTL
-}));
+        // Parse the records
+        const records = data.Answer.map(answer => ({
+          name: answer.name,
+          type: recordType,
+          data: answer.data,
+          ttl: answer.TTL
+        }));
 
-resolve(records);
-})
-.catch(error => {
-console.error(`Error fetching ${recordType} records from Google DNS:`, error);
-reject(error);
-});
-});
+        resolve(records);
+      })
+      .catch(error => {
+        console.error(`Error fetching ${recordType} records from Google DNS:`, error);
+        reject(error);
+      });
+  });
 }
 
 // Function to fetch DNS records from Cloudflare
 function fetchFromCloudflare(domain, recordType) {
-return new Promise((resolve, reject) => {
-// Cloudflare DNS-over-HTTPS API uses a different format
-const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${recordType}`;
+  return new Promise((resolve, reject) => {
+    // Cloudflare DNS-over-HTTPS API uses a different format
+    const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${recordType}`;
 
-fetch(url, {
-headers: {
-'Accept': 'application/dns-json'
-}
-})
-.then(response => {
-if (!response.ok) {
-  throw new Error(`DNS query failed: ${response.status} ${response.statusText}`);
-}
-return response.json();
-})
-.then(data => {
-console.log(`Received ${recordType} records from Cloudflare:`, data);
+    fetch(url, {
+      headers: {
+        'Accept': 'application/dns-json'
+      }
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`DNS query failed: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log(`Received ${recordType} records from Cloudflare:`, data);
 
-if (!data.Answer || data.Answer.length === 0) {
-  resolve([]);
-  return;
-}
+        if (!data.Answer || data.Answer.length === 0) {
+          resolve([]);
+          return;
+        }
 
-// Parse the records
-const records = data.Answer.map(answer => ({
-  name: answer.name,
-  type: recordType,
-  data: answer.data,
-  ttl: answer.TTL
-}));
+        // Parse the records
+        const records = data.Answer.map(answer => ({
+          name: answer.name,
+          type: recordType,
+          data: answer.data,
+          ttl: answer.TTL
+        }));
 
-resolve(records);
-})
-.catch(error => {
-console.error(`Error fetching ${recordType} records from Cloudflare:`, error);
-reject(error);
-});
-});
+        resolve(records);
+      })
+      .catch(error => {
+        console.error(`Error fetching ${recordType} records from Cloudflare:`, error);
+        reject(error);
+      });
+  });
 }
 
 // Function to display aggregated records from multiple providers
 function displayAggregatedRecords(domain, allRecords) {
-// Go through each record type
-Object.keys(allRecords).forEach(recordType => {
-const recordsContainer = document.getElementById(`${recordType.toLowerCase()}-records`);
-if (!recordsContainer) return;
+  // Go through each record type
+  Object.keys(allRecords).forEach(recordType => {
+    const recordsContainer = document.getElementById(`${recordType.toLowerCase()}-records`);
+    if (!recordsContainer) return;
 
-const records = allRecords[recordType];
+    const records = allRecords[recordType];
 
-if (records.length === 0) {
-recordsContainer.textContent = 'No records found';
-return;
-}
+    if (records.length === 0) {
+      recordsContainer.textContent = 'No records found';
+      return;
+    }
 
-// Clear existing content
-recordsContainer.innerHTML = '';
+    // Clear existing content
+    recordsContainer.innerHTML = '';
 
-// Use a Map to deduplicate records by their data
-const uniqueRecords = new Map();
+    // Use a Map to deduplicate records by their data
+    const uniqueRecords = new Map();
 
-// First pass: collect all records and count occurrences
-records.forEach(record => {
-const key = record.data;
-if (uniqueRecords.has(key)) {
-const existing = uniqueRecords.get(key);
-existing.sources.push(record.provider);
-} else {
-uniqueRecords.set(key, {
-  ...record,
-  sources: [record.provider]
-});
-}
-});
+    // First pass: collect all records and count occurrences
+    records.forEach(record => {
+      // CHANGE: Use both name and data as the key for better deduplication
+      const key = `${record.data}|${record.name}`;
+      
+      if (uniqueRecords.has(key)) {
+        const existing = uniqueRecords.get(key);
+        // CHANGE: Only add the provider if it's not already in the sources array
+        if (!existing.sources.includes(record.provider)) {
+          existing.sources.push(record.provider);
+        }
+      } else {
+        uniqueRecords.set(key, {
+          ...record,
+          sources: [record.provider]
+        });
+      }
+    });
 
-// Display the unique records
-uniqueRecords.forEach(record => {
-const recordItem = document.createElement('div');
-recordItem.className = 'record-item';
+    // Display the unique records
+    uniqueRecords.forEach(record => {
+      const recordItem = document.createElement('div');
+      recordItem.className = 'record-item';
 
-// Format record data based on record type
-let displayText = '';
+      // Format record data based on record type
+      let displayText = '';
 
-switch(recordType) {
-case 'NS':
-  // Just display the nameserver record with TTL
-  recordItem.textContent = record.data + ` (TTL: ${record.ttl}s)`;
-  
-  // Add sources info
-  const sourcesText = document.createElement('span');
-  sourcesText.className = 'record-sources';
-  sourcesText.textContent = ` [Sources: ${record.sources.join(', ')}]`;
-  recordItem.appendChild(sourcesText);
-  
-  // If the user wants IP addresses, we fetch and add them
-  fetchNameserverIP(record.data, recordItem);
-  break;
-  
-case 'MX':
-  // MX records have priority and target
-  let [priority, host] = ['', ''];
-  if (record.data.includes(' ')) {
-    [priority, host] = record.data.split(' ');
-    displayText = `Priority: ${priority}, Host: ${host}`;
-  } else {
-    displayText = record.data;
-  }
-  break;
-  
-case 'TXT':
-  // Remove quotes from TXT records if present
-  let txtValue = record.data;
-  if (txtValue.startsWith('"') && txtValue.endsWith('"')) {
-    txtValue = txtValue.slice(1, -1);
-  }
-  displayText = txtValue;
-  break;
-  
-case 'CNAME':
-  // Clearly format CNAME records
-  displayText = `Points to: ${record.data}`;
-  break;
-  
-case 'SOA':
-  // SOA records have multiple fields
-  const soaParts = record.data.split(' ');
-  if (soaParts.length >= 7) {
-    displayText = `Primary NS: ${soaParts[0]}, Admin: ${soaParts[1]}, ` +
-                 `Serial: ${soaParts[2]}, Refresh: ${soaParts[3]}s, ` +
-                 `Retry: ${soaParts[4]}s, Expire: ${soaParts[5]}s, ` +
-                 `Minimum: ${soaParts[6]}s`;
-  } else {
-    displayText = record.data;
-  }
-  break;
-  
-case 'PTR':
-  displayText = `Hostname: ${record.data}`;
-  break;
-  
-default:
-  displayText = record.data;
-}
+      switch(recordType) {
+        case 'NS':
+          // CHANGE: Just display the nameserver record, no additional formatting
+          displayText = record.data;
+          break;
+          
+        case 'MX':
+          // MX records have priority and target
+          let [priority, host] = ['', ''];
+          if (record.data.includes(' ')) {
+            [priority, host] = record.data.split(' ');
+            displayText = `Priority: ${priority}, Host: ${host}`;
+          } else {
+            displayText = record.data;
+          }
+          break;
+          
+        case 'TXT':
+          // Remove quotes from TXT records if present
+          let txtValue = record.data;
+          if (txtValue.startsWith('"') && txtValue.endsWith('"')) {
+            txtValue = txtValue.slice(1, -1);
+          }
+          displayText = txtValue;
+          break;
+          
+        case 'CNAME':
+          // Clearly format CNAME records
+          displayText = `Points to: ${record.data}`;
+          break;
+          
+        case 'SOA':
+          // SOA records have multiple fields
+          const soaParts = record.data.split(' ');
+          if (soaParts.length >= 7) {
+            displayText = `Primary NS: ${soaParts[0]}, Admin: ${soaParts[1]}, ` +
+                         `Serial: ${soaParts[2]}, Refresh: ${soaParts[3]}s, ` +
+                         `Retry: ${soaParts[4]}s, Expire: ${soaParts[5]}s, ` +
+                         `Minimum: ${soaParts[6]}s`;
+          } else {
+            displayText = record.data;
+          }
+          break;
+          
+        case 'PTR':
+          displayText = `Hostname: ${record.data}`;
+          break;
+          
+        case 'A':
+        case 'AAAA':
+          // CHANGE: Just display the IP address for A and AAAA records
+          displayText = record.data;
+          break;
+          
+        default:
+          displayText = record.data;
+      }
 
-// Only set textContent if it hasn't been set already (NS case)
-if (recordType !== 'NS') {
-recordItem.textContent = displayText;
+      // CHANGE: Set the record text directly instead of handling NS records differently
+      recordItem.textContent = displayText;
 
-// Add TTL info
-recordItem.textContent += ` (TTL: ${record.ttl}s)`;
+      // Add TTL info
+      recordItem.textContent += ` (TTL: ${record.ttl}s)`;
 
-// Add sources info
-const sourcesText = document.createElement('span');
-sourcesText.className = 'record-sources';
-sourcesText.textContent = ` [Sources: ${record.sources.join(', ')}]`;
-recordItem.appendChild(sourcesText);
-}
+      // Add sources info
+      const sourcesText = document.createElement('span');
+      sourcesText.className = 'record-sources';
+      sourcesText.textContent = ` [Sources: ${record.sources.join(', ')}]`;
+      recordItem.appendChild(sourcesText);
 
-recordsContainer.appendChild(recordItem);
-});
-});
+      // CHANGE: Move nameserver IP fetching here and handle consistently
+      if (recordType === 'NS') {
+        fetchNameserverIP(record.data, recordItem);
+      }
+
+      recordsContainer.appendChild(recordItem);
+    });
+  });
 }
 
 // Function to fetch IP address for a nameserver
 function fetchNameserverIP(nameserver, recordItem) {
-// Clean the nameserver name if it has a trailing dot
-const cleanNameserver = nameserver.endsWith('.') ? nameserver.slice(0, -1) : nameserver;
+  // Clean the nameserver name if it has a trailing dot
+  const cleanNameserver = nameserver.endsWith('.') ? nameserver.slice(0, -1) : nameserver;
 
-// Fetch A record for the nameserver from multiple providers for better reliability
-Promise.all([
-fetchARecordFromGoogle(cleanNameserver),
-fetchARecordFromCloudflare(cleanNameserver)
-])
-.then(results => {
-// Combine results from both providers
-const allIPs = results
-.filter(result => result) // Remove any null results
-.flat() // Flatten the array
-.filter((ip, index, self) => self.indexOf(ip) === index); // Deduplicate
+  // Fetch A record for the nameserver from multiple providers for better reliability
+  Promise.all([
+    fetchARecordFromGoogle(cleanNameserver),
+    fetchARecordFromCloudflare(cleanNameserver)
+  ])
+    .then(results => {
+      // Combine results from both providers
+      const allIPs = results
+        .filter(result => result) // Remove any null results
+        .flat() // Flatten the array
+        .filter((ip, index, self) => self.indexOf(ip) === index); // Deduplicate
 
-if (allIPs.length > 0) {
-// Add IPs to the record item
-const ipSpan = document.createElement('span');
-ipSpan.className = 'ns-ip';
-ipSpan.textContent = ` (IP: ${allIPs.join(', ')})`;
-recordItem.appendChild(ipSpan);
-}
-})
-.catch(error => {
-console.error(`Error fetching IP for nameserver ${nameserver}:`, error);
-});
+      if (allIPs.length > 0) {
+        // Add IPs to the record item
+        const ipSpan = document.createElement('span');
+        ipSpan.className = 'ns-ip';
+        ipSpan.textContent = ` (IP: ${allIPs.join(', ')})`;
+        recordItem.appendChild(ipSpan);
+      }
+    })
+    .catch(error => {
+      console.error(`Error fetching IP for nameserver ${nameserver}:`, error);
+    });
 }
 
 // Function to fetch A record from Google DNS
 function fetchARecordFromGoogle(domain) {
-return new Promise((resolve, reject) => {
-const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`;
+  return new Promise((resolve, reject) => {
+    const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`;
 
-fetch(url)
-.then(response => response.json())
-.then(data => {
-if (data.Answer && data.Answer.length > 0) {
-  const ips = data.Answer.map(answer => answer.data);
-  resolve(ips);
-} else {
-  resolve([]);
-}
-})
-.catch(error => {
-console.error(`Error fetching IP from Google DNS:`, error);
-resolve([]); // Resolve with empty array to continue the chain
-});
-});
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        if (data.Answer && data.Answer.length > 0) {
+          const ips = data.Answer.map(answer => answer.data);
+          resolve(ips);
+        } else {
+          resolve([]);
+        }
+      })
+      .catch(error => {
+        console.error(`Error fetching IP from Google DNS:`, error);
+        resolve([]); // Resolve with empty array to continue the chain
+      });
+  });
 }
 
 // Function to fetch A record from Cloudflare
 function fetchARecordFromCloudflare(domain) {
-return new Promise((resolve, reject) => {
-const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=A`;
+  return new Promise((resolve, reject) => {
+    const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=A`;
 
-fetch(url, {
-headers: {
-'Accept': 'application/dns-json'
-}
-})
-.then(response => response.json())
-.then(data => {
-if (data.Answer && data.Answer.length > 0) {
-  const ips = data.Answer.map(answer => answer.data);
-  resolve(ips);
-} else {
-  resolve([]);
-}
-})
-.catch(error => {
-console.error(`Error fetching IP from Cloudflare:`, error);
-resolve([]); // Resolve with empty array to continue the chain
-});
-});
+    fetch(url, {
+      headers: {
+        'Accept': 'application/dns-json'
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.Answer && data.Answer.length > 0) {
+          const ips = data.Answer.map(answer => answer.data);
+          resolve(ips);
+        } else {
+          resolve([]);
+        }
+      })
+      .catch(error => {
+        console.error(`Error fetching IP from Cloudflare:`, error);
+        resolve([]); // Resolve with empty array to continue the chain
+      });
+  });
 }
