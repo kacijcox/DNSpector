@@ -62,10 +62,24 @@ header {
   padding-bottom: 10px;
 }
 
+/* Title container with icon styling */
+.title-container {
+  display: flex;
+  align-items: center;
+}
+
+/* DNS Icon styling */
+.dns-icon {
+  width: 20px;
+  height: 20px;
+  margin-left: 8px;
+}
+
 header h1 {
   margin: 0;
   font-size: 1.5rem;
   color: #333;
+  font-weight: bold;
 }
 
 .site-info {
