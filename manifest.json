@@ -9,7 +9,11 @@
   "host_permissions": [
     "https://dns.google/*",
     "https://*.google.com/*",
-    "https://*.gstatic.com/*"
+    "https://*.gstatic.com/*",
+    "https://*.cloudflare-dns.com/*",
+    "https://*.quad9.net/*", 
+    "https://dns.api.umbrella.com/*",
+    "https://dns.nextdns.io/*"
   ],
   "action": {
     "default_popup": "popup.html",
