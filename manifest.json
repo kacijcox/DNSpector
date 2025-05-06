@@ -13,6 +13,7 @@
     "https://*.cloudflare-dns.com/*",
     "https://*.quad9.net/*", 
     "https://dns.api.umbrella.com/*",
+    "https://dns.umbrella.com/*",
     "https://dns.nextdns.io/*"
   ],
   "action": {
@@ -29,6 +30,6 @@
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://dns.google/ https://*.google.com https://*.gstatic.com"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://dns.google/ https://*.cloudflare-dns.com/ https://*.quad9.net/ https://dns.umbrella.com/ https://dns.api.umbrella.com/ https://*.google.com/ https://*.gstatic.com/"
   }
 }

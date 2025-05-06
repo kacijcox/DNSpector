@@ -36,3 +36,96 @@
 .provider-cloudflare {
   background-color: #F6821F;
 }
+
+/* Added styling for empty record messages */
+.info-text {
+  font-size: 10px;
+  font-style: italic;
+  color: #999;
+  display: block;
+  margin-top: 2px;
+}
+
+/* Container styling */
+.container {
+  min-width: 500px;
+  padding: 15px;
+}
+
+/* Header styling */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.site-info {
+  display: flex;
+  align-items: center;
+}
+
+#favicon-container {
+  margin-right: 8px;
+}
+
+#current-url {
+  font-weight: 500;
+}
+
+/* Record section styling */
+.record-section {
+  margin-bottom: 15px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.record-section h3 {
+  margin: 0;
+  padding: 8px 12px;
+  background-color: #f5f5f5;
+  font-size: 14px;
+  border-bottom: 1px solid #eee;
+}
+
+.records-list {
+  padding: 8px 12px;
+}
+
+.record-item {
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.record-item:last-child {
+  border-bottom: none;
+}
+
+/* Loader styling */
+.loader {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.hidden {
+  display: none;
+}

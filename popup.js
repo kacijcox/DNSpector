@@ -3,25 +3,61 @@ document.addEventListener('DOMContentLoaded', function() {
   chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
     const currentTab = tabs[0];
     const url = new URL(currentTab.url);
-    const domain = url.hostname;
     
-    console.log("Current domain:", domain);
+    // Extract base domain instead of using hostname directly
+    const hostname = url.hostname;
+    const domain = extractBaseDomain(hostname);
+    
+    console.log("Current hostname:", hostname);
+    console.log("Base domain for DNS lookup:", domain);
     
     // Display current URL
-    document.getElementById('current-url').textContent = domain;
+    document.getElementById('current-url').textContent = hostname;
     
     // Add favicon
     const faviconContainer = document.getElementById('favicon-container');
     const faviconImg = document.createElement('img');
-    faviconImg.src = `https://www.google.com/s2/favicons?domain=${domain}`;
+    faviconImg.src = `https://www.google.com/s2/favicons?domain=${hostname}`;
     faviconContainer.appendChild(faviconImg);
     
-    // Load DNS information
+    // Load DNS information for the base domain to get correct records
     loadDnsRecords(domain);
   });
 });
 
-// Function to fetch DNS records directly from Google's DNS-over-HTTPS API
+// Function to extract base domain from hostname
+function extractBaseDomain(hostname) {
+  // If it starts with www., strip it off
+  let domain = hostname;
+  if (domain.startsWith('www.')) {
+    domain = domain.substring(4);
+  }
+  
+  // For subdomains, we might want to query the base domain for NS records
+  // Only keep the last two parts for common TLDs, or last three for country-specific TLDs
+  const parts = domain.split('.');
+  if (parts.length > 2) {
+    // Handle special cases like .co.uk, .com.au, etc.
+    const lastPart = parts[parts.length - 1];
+    const secondLastPart = parts[parts.length - 2];
+    
+    if ((lastPart.length === 2 && secondLastPart.length <= 3) || 
+        ['com', 'org', 'net', 'edu', 'gov', 'mil'].includes(secondLastPart)) {
+      // Country code TLD with special second level
+      if (parts.length > 3) {
+        domain = parts.slice(-3).join('.');
+      }
+    } else {
+      // Normal TLD
+      domain = parts.slice(-2).join('.');
+    }
+  }
+  
+  console.log(`Extracted base domain: ${domain}`);
+  return domain;
+}
+
+// Function to fetch DNS records
 function loadDnsRecords(domain) {
   console.log('Loading DNS records for:', domain);
   
@@ -40,63 +76,75 @@ function loadDnsRecords(domain) {
     }
   });
 
-  // Define DNS providers
+  // Define DNS providers - ONLY use Google DNS initially since it's working
   const dnsProviders = [
     { 
-      name: 'Google DNS', // CHANGE: Updated provider name for better clarity
+      name: 'Google DNS', 
       fetchFunction: fetchFromGoogleDNS 
-    },
-    { 
-      name: 'Cloudflare', 
-      fetchFunction: fetchFromCloudflare 
     }
+    // Temporarily removing other providers until we fix the CSP issues
   ];
   
-  // Fetch each record type
-  let completedRequests = 0;
-  const totalRequests = recordTypes.length * dnsProviders.length;
-
+  // Use Promise.all for better parallel fetching
+  const fetchPromises = [];
+  
   // Create an object to store all records from all providers
   const allRecords = {};
   recordTypes.forEach(type => {
     allRecords[type] = [];
   });
-
-  // Fetch records from each provider
+  
+  // Create all fetch promises
   dnsProviders.forEach(provider => {
     recordTypes.forEach(type => {
-      provider.fetchFunction(domain, type)
+      // Add debugging code to verify if fetch requests are actually being made
+      console.log(`Creating fetch request for ${type} records from ${provider.name}`);
+      
+      const promise = provider.fetchFunction(domain, type)
         .then(records => {
           // Store records from this provider
           if (records && records.length > 0) {
+            console.log(`Got ${records.length} ${type} records from ${provider.name}:`, records);
             const recordsWithProvider = records.map(record => ({
               ...record,
               provider: provider.name
             }));
-    
             // Add to our collection
             allRecords[type] = [...allRecords[type], ...recordsWithProvider];
+          } else {
+            console.log(`No ${type} records from ${provider.name}`);
           }
         })
         .catch(error => {
           console.error(`Error fetching ${type} records from ${provider.name}:`, error);
-        })
-        .finally(() => {
-          completedRequests++;
-          
-          // Check if all requests are complete
-          if (completedRequests === totalRequests) {
-            // Display the aggregated results
-            displayAggregatedRecords(domain, allRecords);
-            
-            // Hide the loader
-            if (dnsLoader) {
-              dnsLoader.classList.add('hidden');
-            }
-          }
         });
+      
+      fetchPromises.push(promise);
     });
   });
+  
+  // Wait for all fetches to complete
+  Promise.allSettled(fetchPromises)
+    .then(results => {
+      console.log('All DNS queries completed');
+      console.log('Aggregated records:', allRecords);
+      
+      // Check if we got NS records
+      const nsRecords = allRecords.NS;
+      if (nsRecords && nsRecords.length > 0) {
+        console.log(`Found ${nsRecords.length} NS records`);
+      } else {
+        console.warn('No NS records found. This might indicate a problem with DNS resolution.');
+      }
+      
+      // Display the aggregated results and force display of all record sections
+      displayAggregatedRecords(domain, allRecords);
+      
+      // Hide the loader
+      if (dnsLoader) {
+        dnsLoader.classList.add('hidden');
+      }
+    });
 
   // Fallback to hide loader after 10 seconds
   setTimeout(() => {
@@ -111,6 +159,8 @@ function fetchFromGoogleDNS(domain, recordType) {
   return new Promise((resolve, reject) => {
     const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${recordType}`;
 
+    console.log(`Fetching ${recordType} from Google DNS: ${url}`);
+    
     fetch(url)
       .then(response => {
         if (!response.ok) {
@@ -138,49 +188,7 @@ function fetchFromGoogleDNS(domain, recordType) {
       })
       .catch(error => {
         console.error(`Error fetching ${recordType} records from Google DNS:`, error);
-        reject(error);
-      });
-  });
-}
-
-// Function to fetch DNS records from Cloudflare
-function fetchFromCloudflare(domain, recordType) {
-  return new Promise((resolve, reject) => {
-    // Cloudflare DNS-over-HTTPS API uses a different format
-    const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${recordType}`;
-
-    fetch(url, {
-      headers: {
-        'Accept': 'application/dns-json'
-      }
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`DNS query failed: ${response.status} ${response.statusText}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log(`Received ${recordType} records from Cloudflare:`, data);
-
-        if (!data.Answer || data.Answer.length === 0) {
-          resolve([]);
-          return;
-        }
-
-        // Parse the records
-        const records = data.Answer.map(answer => ({
-          name: answer.name,
-          type: recordType,
-          data: answer.data,
-          ttl: answer.TTL
-        }));
-
-        resolve(records);
-      })
-      .catch(error => {
-        console.error(`Error fetching ${recordType} records from Cloudflare:`, error);
-        reject(error);
+        resolve([]); // Resolve with empty array instead of rejecting
       });
   });
 }
@@ -195,30 +203,56 @@ function displayAggregatedRecords(domain, allRecords) {
     const records = allRecords[recordType];
 
     if (records.length === 0) {
-      recordsContainer.textContent = 'No records found';
+      // CHANGE: Display a simplified message when no records are found
+      recordsContainer.innerHTML = `
+        <div class="record-item">
+          <span>No ${recordType} records found for ${domain}</span>
+        </div>
+      `;
       return;
     }
 
     // Clear existing content
     recordsContainer.innerHTML = '';
 
-    // Use a Map to deduplicate records by their data
+    // Better deduplication based on the combination of record type and data
     const uniqueRecords = new Map();
 
     // First pass: collect all records and count occurrences
     records.forEach(record => {
-      // CHANGE: Use both name and data as the key for better deduplication
-      const key = `${record.data}|${record.name}`;
+      // Create a key specifically for the record type - for NS records, just use the data
+      let key;
+      
+      // Strip trailing dots for consistency
+      const cleanData = record.data.endsWith('.') ? record.data.slice(0, -1) : record.data;
+      
+      // Create a unique key based on the type of record
+      if (recordType === 'NS' || recordType === 'SOA' || recordType === 'TXT') {
+        key = cleanData;
+      } else if (recordType === 'MX') {
+        // For MX records, include the priority in the key
+        key = cleanData;
+      } else if (recordType === 'A' || recordType === 'AAAA') {
+        // For IP addresses, just use the IP itself
+        key = cleanData;
+      } else if (recordType === 'CNAME') {
+        // For CNAME records, use the canonical name
+        key = cleanData;
+      } else {
+        // Default key format
+        key = `${cleanData}`;
+      }
       
       if (uniqueRecords.has(key)) {
         const existing = uniqueRecords.get(key);
-        // CHANGE: Only add the provider if it's not already in the sources array
+        // Only add the provider if it's not already in the sources array
         if (!existing.sources.includes(record.provider)) {
           existing.sources.push(record.provider);
         }
       } else {
         uniqueRecords.set(key, {
           ...record,
+          data: cleanData, // Use the version without trailing dot
           sources: [record.provider]
         });
       }
@@ -234,7 +268,7 @@ function displayAggregatedRecords(domain, allRecords) {
 
       switch(recordType) {
         case 'NS':
-          // CHANGE: Just display the nameserver record, no additional formatting
+          // Just display the nameserver
           displayText = record.data;
           break;
           
@@ -282,7 +316,7 @@ function displayAggregatedRecords(domain, allRecords) {
           
         case 'A':
         case 'AAAA':
-          // CHANGE: Just display the IP address for A and AAAA records
+          // Just display the IP address
           displayText = record.data;
           break;
           
@@ -290,7 +324,7 @@ function displayAggregatedRecords(domain, allRecords) {
           displayText = record.data;
       }
 
-      // CHANGE: Set the record text directly instead of handling NS records differently
+      // Set the record text
       recordItem.textContent = displayText;
 
       // Add TTL info
@@ -302,7 +336,7 @@ function displayAggregatedRecords(domain, allRecords) {
       sourcesText.textContent = ` [Sources: ${record.sources.join(', ')}]`;
       recordItem.appendChild(sourcesText);
 
-      // CHANGE: Move nameserver IP fetching here and handle consistently
+      // If it's a nameserver, fetch its IP addresses
       if (recordType === 'NS') {
         fetchNameserverIP(record.data, recordItem);
       }
@@ -317,23 +351,14 @@ function fetchNameserverIP(nameserver, recordItem) {
   // Clean the nameserver name if it has a trailing dot
   const cleanNameserver = nameserver.endsWith('.') ? nameserver.slice(0, -1) : nameserver;
 
-  // Fetch A record for the nameserver from multiple providers for better reliability
-  Promise.all([
-    fetchARecordFromGoogle(cleanNameserver),
-    fetchARecordFromCloudflare(cleanNameserver)
-  ])
-    .then(results => {
-      // Combine results from both providers
-      const allIPs = results
-        .filter(result => result) // Remove any null results
-        .flat() // Flatten the array
-        .filter((ip, index, self) => self.indexOf(ip) === index); // Deduplicate
-
-      if (allIPs.length > 0) {
+  // Fetch A record for the nameserver from Google DNS (only provider working currently)
+  fetchARecordFromGoogle(cleanNameserver)
+    .then(ips => {
+      if (ips && ips.length > 0) {
         // Add IPs to the record item
         const ipSpan = document.createElement('span');
         ipSpan.className = 'ns-ip';
-        ipSpan.textContent = ` (IP: ${allIPs.join(', ')})`;
+        ipSpan.textContent = ` (IP: ${ips.join(', ')})`;
         recordItem.appendChild(ipSpan);
       }
     })
@@ -359,32 +384,6 @@ function fetchARecordFromGoogle(domain) {
       })
       .catch(error => {
         console.error(`Error fetching IP from Google DNS:`, error);
-        resolve([]); // Resolve with empty array to continue the chain
-      });
-  });
-}
-
-// Function to fetch A record from Cloudflare
-function fetchARecordFromCloudflare(domain) {
-  return new Promise((resolve, reject) => {
-    const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=A`;
-
-    fetch(url, {
-      headers: {
-        'Accept': 'application/dns-json'
-      }
-    })
-      .then(response => response.json())
-      .then(data => {
-        if (data.Answer && data.Answer.length > 0) {
-          const ips = data.Answer.map(answer => answer.data);
-          resolve(ips);
-        } else {
-          resolve([]);
-        }
-      })
-      .catch(error => {
-        console.error(`Error fetching IP from Cloudflare:`, error);
         resolve([]); // Resolve with empty array to continue the chain
       });
   });
