@@ -1,55 +1,82 @@
+/* Import Fredoka font */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Tinos:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+/* Color palette based on the logo */
+:root {
+  --primary-blue: #2176FF;     /* Main blue from the logo */
+  --light-blue: #90B8F8;       /* Lighter blue accent */
+  --lighter-blue: #E6F0FF;     /* Very light blue for background */
+  --dark-blue: #0B5CCA;        /* Darker blue for contrast */
+  --white: #FFFFFF;            /* White */
+  --light-gray: #F5F7FA;       /* Light gray for backgrounds */
+  --medium-gray: #E1E5EA;      /* Medium gray for borders */
+  --dark-gray: #333333;        /* Dark gray for text */
+}
+
 /* Record sources styling */
 .record-sources {
-  font-size: 11px;
+  font-size: 12px;  /* Increased from 11px */
   font-style: italic;
-  color: #666;
+  color: var(--dark-gray);
   margin-left: 5px;
 }
 
 /* Highlight records with multiple sources */
 .record-item:has(.record-sources:contains('Google DNS, Cloudflare')) {
-  background-color: #e6ffe6; /* Light green background */
+  background-color: var(--light-blue);
+  background-opacity: 0.2;
 }
 
 /* Special styling for nameserver IP addresses */
 .ns-ip {
   display: inline-block;
-  color: #3498db;
+  color: var(--primary-blue);
   font-weight: 500;
   margin-left: 5px;
+  font-size: 15px;  /* Added specific font size */
 }
 
 /* Provider badge styling */
 .provider-badge {
   display: inline-block;
-  font-size: 10px;
+  font-size: 12px;  /* Increased from 10px */
   padding: 1px 5px;
   border-radius: 3px;
   margin-left: 5px;
-  color: white;
+  color: var(--white);
 }
 
 .provider-google {
-  background-color: #4285F4;
+  background-color: var(--primary-blue);
 }
 
 .provider-cloudflare {
-  background-color: #F6821F;
+  background-color: var(--dark-blue);
 }
 
 /* Added styling for empty record messages */
 .info-text {
-  font-size: 10px;
+  font-size: 12px;  /* Increased from 10px */
   font-style: italic;
-  color: #999;
+  color: var(--dark-gray);
   display: block;
   margin-top: 2px;
+}
+
+/* Body styling */
+body {
+  font-family: 'Tinos', serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--lighter-blue);
+  color: var(--dark-gray);
+  font-size: 16px;  /* Base font size increased */
 }
 
 /* Container styling */
 .container {
   min-width: 500px;
-  padding: 15px;
+  padding: 25px;
 }
 
 /* Header styling */
@@ -57,9 +84,9 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--medium-gray);
+  padding-bottom: 15px;
 }
 
 /* Title container with icon styling */
@@ -70,54 +97,77 @@ header {
 
 /* DNS Icon styling */
 .dns-icon {
-  width: 20px;
-  height: 20px;
+  width: 100px;
+  height: 80px;
   margin-left: 8px;
+}
+
+.dns-icon img {
+  width: 100%;
+  height: auto;
 }
 
 header h1 {
   margin: 0;
-  font-size: 1.5rem;
-  color: #333;
-  font-weight: bold;
+  font-size: 1.8rem;
+  color: var(--primary-blue);
+  font-weight: 600;
+  font-family: 'Fredoka', sans-serif;
 }
 
 .site-info {
   display: flex;
   align-items: center;
+  font-family: 'Tinos', serif;
+  margin-right: 10px;
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 6px 12px;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 #favicon-container {
-  margin-right: 8px;
+  margin-right: 10px;
 }
 
 #current-url {
   font-weight: 500;
+  font-size: 16px;
+  color: var(--dark-blue);
 }
 
 /* Record section styling */
 .record-section {
-  margin-bottom: 15px;
-  border: 1px solid #eee;
-  border-radius: 4px;
+  margin-bottom: 20px;
+  border: 1px solid var(--medium-gray);
+  border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background-color: var(--white);
 }
 
 .record-section h3 {
   margin: 0;
-  padding: 8px 12px;
-  background-color: #f5f5f5;
-  font-size: 14px;
-  border-bottom: 1px solid #eee;
+  padding: 12px 18px;
+  background-color: var(--light-gray);
+  font-size: 18px;  /* Increased from 16px */
+  border-bottom: 1px solid var(--medium-gray);
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 500;
+  color: var(--primary-blue);
 }
 
 .records-list {
-  padding: 8px 12px;
+  padding: 12px 18px;
+  font-family: 'Tinos', serif;
+  font-size: 16px;  /* Added explicit size */
 }
 
 .record-item {
-  padding: 6px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 0;  /* Increased from 10px */
+  border-bottom: 1px solid var(--medium-gray);
+  font-size: 15px;  /* Increased from the default */
+  line-height: 1.4;  /* Added line height for better readability */
 }
 
 .record-item:last-child {
@@ -126,8 +176,8 @@ header h1 {
 
 /* Loader styling */
 .loader {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3498db;
+  border: 3px solid var(--light-blue);
+  border-top: 3px solid var(--primary-blue);
   border-radius: 50%;
   width: 20px;
   height: 20px;
